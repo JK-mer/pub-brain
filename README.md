@@ -54,8 +54,10 @@ topic cluster. Coverage and gaps at a glance:
 
 ![The Insights landscape](docs/media/pb-landscape.png)
 
-There is also a 76-second [registry film](docs/media/registry-film.mp4)
-that walks through the whole system on real data.
+The 76-second registry film walks through the whole system on real data
+([mp4 in full quality](docs/media/registry-film.mp4)):
+
+![The registry film](docs/media/registry-film.gif)
 
 ## How it works
 
