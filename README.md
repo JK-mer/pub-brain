@@ -17,7 +17,8 @@ phrased"), and through an AI assistant that can query the catalog directly.
 
 Generalised from a production system in daily personal use. The published
 version contains the architecture and code; the data itself is rebuilt from
-public web pages by running the pipeline.
+public web pages by running the pipeline. Everything visible in the
+screenshots and film below is public information from merics.org.
 
 ## What it does
 
