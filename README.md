@@ -104,13 +104,24 @@ systemd user services on a headless box, loopback-only binding, a tunnel in
 front, an access policy on the human-facing hostname and OAuth on the
 assistant-facing one.
 
-## Integration at MERICS
+## Integration with chat interfaces
 
-The org-specific parts are two: the page parser and the staff roster sync.
-An institutional deployment points the LLM layer at a sanctioned endpoint,
-runs the pipeline on a schedule, and exposes the MCP server to the
-assistants staff already use. The workbench is the editorial control
-point for correcting and spot-checking summaries.
+The MCP server exposes the catalog's query layer as tools, so any chat UI
+that speaks MCP can search the catalog, pull summaries and cite records
+mid-conversation.
+
+- Local assistants (Claude Desktop, Claude Code, and other MCP clients):
+  register `python -m pubbrain mcp` as a stdio server.
+- Self-hosted chat UIs, OpenWebUI as the example: run
+  `python -m pubbrain mcp --transport streamable-http` and add it in
+  OpenWebUI as an MCP tool server (directly over streamable HTTP, or
+  through its `mcpo` OpenAPI bridge). Every user of the shared UI then
+  gets catalog search grounded in the actual publication record.
+- Remote setups authenticate with a bearer token (`PUBBRAIN_MCP_TOKEN`);
+  see [deploy/server/](deploy/server/).
+
+Only one MCP tool writes (`flag_summary`); everything else is read-only,
+so a shared chat UI cannot corrupt the catalog.
 
 ## Repository map
 
