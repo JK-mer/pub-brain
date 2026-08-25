@@ -38,6 +38,25 @@ public web pages by running the pipeline.
   flagging records, and an MCP server that exposes the same queries to AI
   assistants (Claude, or anything else that speaks MCP).
 
+## What it looks like
+
+Hybrid search over the catalog, ranked by keyword and meaning together:
+
+![Search results for "de-risking"](docs/media/pb-search.png)
+
+A record page: the generated summary, key findings and entities, with the
+editorial controls (credit, project, flag) beside them:
+
+![A publication record](docs/media/pb-record.png)
+
+The landscape: every summarised publication placed by meaning, coloured by
+topic cluster. Coverage and gaps at a glance:
+
+![The Insights landscape](docs/media/pb-landscape.png)
+
+There is also a 76-second [registry film](docs/media/registry-film.mp4)
+that walks through the whole system on real data.
+
 ## How it works
 
 ```mermaid
