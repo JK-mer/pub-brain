@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- A stamped record: ink block, two thick rules, seal. Deliberately only
+       three shapes — at 16px a third rule and the seal blur into each other,
+       and lettering turns to mush entirely. The seal is what makes the tab
+       findable at a glance. Registry palette, inverted for a dark tab strip. -->
+  <style>
+    .ink { fill: #1b1f23; }
+    .paper { fill: #e9eceb; }
+    .seal { fill: #b3261e; }
+    @media (prefers-color-scheme: dark) {
+      .ink { fill: #d9dedd; }
+      .paper { fill: #17191b; }
+      .seal { fill: #e05b52; }
+    }
+  </style>
+  <rect class="ink" width="32" height="32" rx="3"/>
+  <rect class="paper" x="6" y="4" width="20" height="24" rx="1"/>
+  <rect class="ink" x="9" y="8" width="14" height="3"/>
+  <rect class="ink" x="9" y="14" width="14" height="3"/>
+  <circle class="seal" cx="16" cy="23" r="4.5"/>
+</svg>

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Topic map — pub-brain{% endblock %}
+{% block content %}
+<h1>Topic map</h1>
+
+<section id="map-root">
+<div class="filters map-controls">
+  <label for="threshold">link strength</label>
+  <input type="range" id="threshold" min="2" max="15" step="1" value="5">
+  <span class="count-mono" id="edge-count"></span>
+  <span class="clear">edges need at least this many shared publications</span>
+  <button type="button" id="reset-view">reset view</button>
+  <button type="button" id="fullscreen">fullscreen</button>
+  <span class="edge-key">
+    <svg width="16" height="16" aria-hidden="true"><circle class="coming-ring"
+      cx="8" cy="8" r="6"></circle></svg>
+    dashed ring: something coming, not published yet
+  </span>
+</div>
+
+<div class="map-layout">
+  <figure class="map-stage" aria-label="Topic co-occurrence map">
+    <svg id="topic-map" role="img"></svg>
+  </figure>
+  <aside class="map-panel mono" id="map-panel" aria-live="polite">
+    <div class="panel-head">TOPIC REGISTRY</div>
+    <div id="panel-body">
+      <p class="panel-hint">Hover a topic to pull its card.
+      Click it to pin; click a link between two topics for the
+      publications they share. Drag to arrange, scroll to zoom.</p>
+    </div>
+  </aside>
+</div>
+</section>
+
+<p class="scope-note">Node size — weighted output (a Report counts 8, a Comment 1).
+Links — publications carrying both topics among their two strongest
+assignments. Podcasts excluded (#50). Data:
+<a href="{{ url_for('insights.topic_graph_data') }}" class="mono">topic-graph.json</a></p>
+
+<script>
+  const MAP_URLS = {
+    graph: "{{ url_for('insights.topic_graph_data') }}",
+    topic: "{{ url_for('insights.topic_spotlight_data') }}",
+    pair: "{{ url_for('insights.topic_pair_data') }}",
+    catalog: "{{ url_for('catalog.list_view') }}",
+    pub: "{{ url_for('catalog.pub_view', pub_id=0) }}".replace("/0", "/"),
+    upcoming: "{{ url_for('insights.upcoming_edge_data') }}",
+    upcomingPage: "{{ url_for('upcoming.upcoming_view') }}",
+  };
+</script>
+<script src="{{ url_for('static', filename='topic-map.js') }}"></script>
+{% endblock %}

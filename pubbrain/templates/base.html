@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}pub-brain{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+<link rel="mask-icon" href="{{ url_for('static', filename='favicon.svg') }}" color="#b3261e">
+<script>
+  /* before first paint, so a dark preference never flashes light */
+  if (localStorage.getItem('theme') === 'dark')
+    document.documentElement.dataset.theme = 'dark';
+</script>
+</head>
+<body>
+<header>
+  <h1><a href="{{ url_for('catalog.list_view') }}">Publication Brain</a></h1>
+  <span class="utility">
+    <a href="{{ url_for('review.backlog_view') }}" {% if request.path.startswith('/backlog') %}class="active"{% endif %}>backlog</a>
+    <a href="{{ url_for('review.flags_view') }}" {% if request.path.startswith('/flags') %}class="active"{% endif %}>flags</a>
+    <a href="{{ url_for('review.settings_view') }}" {% if request.path.startswith('/settings') %}class="active"{% endif %}>settings</a>
+  </span>
+  <div class="registry">
+    <span><strong>{{ registry.publications }}</strong> publications</span>
+    <span><strong>{{ registry.people }}</strong> people</span>
+    <span>enriched <strong>{{ registry.enriched }}</strong></span>
+    <span>reviewed <strong>{{ registry.reviewed }}</strong></span>
+  </div>
+</header>
+<nav class="top">
+  <a href="{{ url_for('catalog.list_view') }}" {% if request.path == '/' %}class="active"{% endif %}>Catalog</a>
+  <a href="{{ url_for('catalog.people_view') }}" {% if request.path.startswith(('/people', '/person')) %}class="active"{% endif %}>People</a>
+  <a href="{{ url_for('learning.ask_view') }}" {% if request.path.startswith('/ask') %}class="active"{% endif %}>Ask</a>
+  <a href="{{ url_for('catalog.shortlist_view') }}" {% if request.path.startswith('/shortlist') %}class="active"{% endif %}>Shortlist</a>
+  <a href="{{ url_for('catalog.collections_view') }}" {% if request.path.startswith('/collection') %}class="active"{% endif %}>Projects</a>
+  <a href="{{ url_for('learning.glossary_view') }}" {% if request.path.startswith('/glossary') %}class="active"{% endif %}>Glossary</a>
+  <a href="{{ url_for('insights.insights_hub') }}" {% if request.path.startswith('/insights') %}class="active"{% endif %}>Insights</a>
+  {# Absent in remote mode: the routes are not registered (#48, #56). #}
+  {% if serves_upcoming %}
+  <a href="{{ url_for('upcoming.upcoming_view') }}" {% if request.path.startswith('/upcoming') %}class="active"{% endif %}>Upcoming</a>
+  {% endif %}
+  {# future modules land here as routes: digest, quiz, cheat sheets (#8, #9) #}
+
+  <button type="button" class="theme-toggle" aria-label="toggle dark mode"
+    onclick="const r = document.documentElement.dataset;
+             r.theme = r.theme === 'dark' ? '' : 'dark';
+             localStorage.setItem('theme', r.theme || 'light');">◐</button>
+</nav>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer>
+  <span>Local workbench over <span class="mono">data/catalog.db</span> — same
+  query layer as the CLI. Enrichment reaches only what has body text.</span>
+</footer>
+</body>
+</html>

@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Catalog — pub-brain{% endblock %}
+{% block content %}
+<form class="filters" method="get" action="{{ url_for('catalog.list_view') }}">
+  <input type="search" name="q" value="{{ q }}" placeholder="search — hybrid: keywords and paraphrase" autofocus>
+  {% if person_id %}<input type="hidden" name="person" value="{{ person_id }}">{% endif %}
+  {% if starred_only %}<input type="hidden" name="shortlisted" value="1">{% endif %}
+  {% if topic %}<input type="hidden" name="topic" value="{{ topic }}">
+  {% if topic_primary %}<input type="hidden" name="primary" value="1">{% endif %}{% endif %}
+  <input type="hidden" name="filtered" value="1">
+  <button type="submit">Go</button>
+  {% if q or pub_type or year or series or person_id or starred_only or topic %}<a class="clear" href="{{ url_for('catalog.list_view') }}">clear</a>{% endif %}
+  <a class="star-filter{{ ' on' if starred_only }}"
+     href="{{ url_for('catalog.list_view', q=q or None, type=pub_type, year=year,
+                      series=series, person=person_id, topic=topic,
+                      primary='1' if topic_primary else None,
+                      shortlisted=None if starred_only else '1') }}"
+     title="only publications you marked as mattering">{{ '★' if starred_only else '☆' }}</a>
+
+  {# Checkboxes, not a multi-select box: the common operation is dropping one
+     type (podcasts have no enrichment), and ctrl-clicking every other option
+     in a <select multiple> is the wrong shape for that. Nothing ticked = all. #}
+  {# The summary never lists the selection: with 8 types ticked it grew wider
+     than the search box. One name reads better than "1 of 8", a count reads
+     better than eight names. #}
+  <details class="facet">
+    <summary>{% if using_default %}default ({{ pub_type | length }}){% elif not pub_type %}all types{% elif pub_type | length == 1 %}{{ pub_type[0] }}{% else %}{{ pub_type | length }} of {{ types | length }} types{% endif %}</summary>
+    <div class="options">
+      <p class="bulk"><button type="button" onclick="facetSet(this, true)">all</button>
+        <button type="button" onclick="facetSet(this, false)">none</button></p>
+      {% for t in types %}
+      <label><input type="checkbox" name="type" value="{{ t.pub_type }}"
+        {% if t.pub_type in pub_type %}checked{% endif %}> {{ t.pub_type }} <span class="quiet">{{ t.n }}</span></label>
+      {% endfor %}
+    </div>
+  </details>
+
+  {# Years do read as a range when contiguous — "2024-2026" is the thing you
+     meant, and it is no wider than "all years". #}
+  <details class="facet">
+    <summary>{% if not year %}all years{% elif year | length == 1 %}{{ year[0] }}{% elif contiguous_years %}{{ year | min }}–{{ year | max }}{% else %}{{ year | length }} years{% endif %}</summary>
+    <div class="options years">
+      <p class="bulk"><button type="button" onclick="facetSet(this, true)">all</button>
+        <button type="button" onclick="facetSet(this, false)">none</button></p>
+      {% for y in years %}
+      <label><input type="checkbox" name="year" value="{{ y.y }}"
+        {% if y.y in year %}checked{% endif %}> {{ y.y }} <span class="quiet">{{ y.n }}</span></label>
+      {% endfor %}
+    </div>
+  </details>
+
+  {# The recurring MERICS formats (#32) — populated on ~350 records and, until
+     now, filterable nowhere. Standing projects are collections, not this. #}
+  {% if series_options %}
+  <details class="facet">
+    <summary>{% if not series %}all series{% elif series | length == 1 %}{{ series[0] }}{% else %}{{ series | length }} of {{ series_options | length }} series{% endif %}</summary>
+    <div class="options">
+      <p class="bulk"><button type="button" onclick="facetSet(this, true)">all</button>
+        <button type="button" onclick="facetSet(this, false)">none</button></p>
+      {% for s in series_options %}
+      <label><input type="checkbox" name="series" value="{{ s.series }}"
+        {% if s.series in series %}checked{% endif %}> {{ s.series }} <span class="quiet">{{ s.n }}</span></label>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+  <script src="{{ url_for('static', filename='facets.js') }}" defer></script>
+</form>
+
+{% if topic %}
+<p class="count">Topic: <strong>{{ topic_label or topic }}</strong> —
+{% if topic_primary %}publications this is the <em>main</em> subject of.
+<a href="{{ url_for('catalog.list_view', q=q or None, type=pub_type, year=year, topic=topic) }}">include ones that only touch it</a>
+{% else %}every publication carrying this topic, main subject or not.
+<a href="{{ url_for('catalog.list_view', q=q or None, type=pub_type, year=year, topic=topic, primary='1') }}">only the ones it is about</a>
+{% endif %}
+· <a href="{{ url_for('learning.glossary_view') }}">glossary</a></p>
+{% endif %}
+{% if using_default %}
+<p class="count">Showing your default view — {{ pub_type | join(', ') }}.
+<a href="{{ url_for('catalog.list_view', q=q or None, filtered=1) }}">show all types</a>
+· <a href="{{ url_for('review.settings_view') }}">change the default</a></p>
+{% endif %}
+{% for note in notes %}<p class="notice">{{ note }}</p>{% endfor %}
+
+{% if hits is not none %}
+<p class="count">{{ total }} result{{ 's' if total != 1 }} — hybrid-ranked; K = keyword, V = semantic</p>
+{% for h in hits %}
+<article class="row">
+  <div class="meta">
+    <span class="date">{{ h.publication.date_published }}</span>
+    <span class="type">{{ h.publication.pub_type }}</span>
+    <span class="rankers" title="which rankers surfaced this">{{ h.rankers }}</span>
+    {% if h.shortlisted %}<span class="star" title="shortlisted — ranks slightly higher">★</span>{% endif %}
+  </div>
+  <h2><a href="{{ url_for('catalog.pub_view', pub_id=h.publication.id) }}">{{ h.publication.title }}</a></h2>
+  {# A chapter is findable on its own but reads as an orphan without the report
+     it argues in (#36) — "chapter 4 of Shaky China", not a stray page. #}
+  {% if h.parent %}<p class="section-hit">chapter {{ h.parent.parent_position }} of
+    <a href="{{ url_for('catalog.pub_view', pub_id=h.parent.id) }}">{{ h.parent.title }}</a></p>{% endif %}
+  {% if h.one_liner %}<p class="one-liner">{{ h.one_liner }}</p>
+  {% else %}<p class="one-liner none">no enrichment — title match only</p>{% endif %}
+  {% if h.section and h.section.heading %}<p class="section-hit">§ {{ h.section.heading }}</p>{% endif %}
+  <p class="byline">{{ people.get(h.publication.id) | people_line }}</p>
+</article>
+{% else %}
+<p class="empty">No matches.</p>
+{% endfor %}
+
+{% else %}
+<p class="count">{{ total }} publication{{ 's' if total != 1 }}
+  <a class="quiet" href="{{ url_for('catalog.list_view', q=q or None, type=pub_type, year=year, series=series, person=person_id, topic=topic, primary='1' if topic_primary else None, shortlisted='1' if starred_only else None, filtered='1' if not using_default else None, page=page, plain=None if plain else '1') }}">{{ 'show one-liners' if plain else 'show plain language' }}</a>
+</p>
+{% for r in rows %}
+<article class="row">
+  <div class="meta">
+    <span class="date">{{ r.date_published }}</span>
+    <span class="type">{{ r.pub_type }}</span>
+    {% if r.access != 'public' %}<span class="badge member">member</span>{% endif %}
+    {% if r.id in shortlisted %}<span class="star" title="shortlisted">★</span>{% endif %}
+  </div>
+  <h2><a href="{{ url_for('catalog.pub_view', pub_id=r.id) }}">{{ r.title }}</a></h2>
+  {% if plain.get(r.id) %}<p class="plain">{{ plain[r.id] }}</p>
+  {% elif r.summary_one_liner %}<p class="one-liner">{{ r.summary_one_liner }}</p>
+  {% else %}<p class="one-liner none">no enrichment — findable by title only</p>{% endif %}
+  <p class="byline">{{ people.get(r.id) | people_line }}</p>
+</article>
+{% else %}
+<p class="empty">Nothing matches these filters.</p>
+{% endfor %}
+
+{% if pages > 1 %}
+<nav class="pager">
+  {% if page > 1 %}<a href="{{ url_for('catalog.list_view', q=q or None, type=pub_type, year=year, series=series, person=person_id, topic=topic, primary='1' if topic_primary else None, shortlisted='1' if starred_only else None, page=page-1) }}">&larr; newer</a>{% endif %}
+  <span>page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a href="{{ url_for('catalog.list_view', q=q or None, type=pub_type, year=year, series=series, person=person_id, topic=topic, primary='1' if topic_primary else None, shortlisted='1' if starred_only else None, page=page+1) }}">older &rarr;</a>{% endif %}
+</nav>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "pub-brain": {
+      "command": "python",
+      "args": ["-m", "pubbrain", "mcp", "--transport", "stdio"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    }
+  }
+}

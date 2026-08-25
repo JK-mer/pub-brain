@@ -1,0 +1,8 @@
+.wiki/
+data/
+__pycache__/
+*.pyc
+.venv/
+
+# Server deployment secrets (#48)
+deploy/server/.env

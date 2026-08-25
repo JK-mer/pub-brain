@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ person.name }} — pub-brain{% endblock %}
+{% block content %}
+<article class="detail">
+  <h1>{{ person.name }}</h1>
+  <p class="meta">
+    <span class="badge">{{ person.affiliation or 'unclassified' }}</span>
+    <span class="badge">{{ 'current' if person.is_current else 'former / never MERICS' }}</span>
+    {% if person.roster_title %}<span>{{ person.roster_title }}</span>
+    {% elif person.job_title %}<span>{{ person.job_title }} <em>(as last printed on a page)</em></span>{% endif %}
+  </p>
+
+  {# The catalog's controls, scoped to this person (#61). A filter rather than
+     the catalog's hybrid retrieval: over a few dozen credits ranking buys
+     nothing, and a rank cut would drop exactly the records with no summary. #}
+  <form class="filters person-filter" method="get"
+        action="{{ url_for('catalog.person_view', person_id=person.id) }}">
+    <input type="search" name="q" value="{{ q }}"
+           placeholder="filter these by title or summary">
+    <button type="submit">Filter</button>
+    {% if q or pub_type %}
+    <a class="clear" href="{{ url_for('catalog.person_view', person_id=person.id) }}">clear</a>
+    {% endif %}
+    <details class="facet">
+      <summary>{% if not pub_type %}all types{% elif pub_type | length == 1 %}{{ pub_type[0] }}{% else %}{{ pub_type | length }} of {{ types | length }} types{% endif %}</summary>
+      <div class="options">
+        <p class="bulk"><button type="button" onclick="facetSet(this, true)">all</button>
+          <button type="button" onclick="facetSet(this, false)">none</button></p>
+        {% for t in types %}
+        <label><input type="checkbox" name="type" value="{{ t.pub_type }}"
+          {% if t.pub_type in pub_type %}checked{% endif %}> {{ t.pub_type }}
+          <span class="quiet">{{ t.n }}</span></label>
+        {% endfor %}
+      </div>
+    </details>
+    {# The filter reads titles and summaries only; the catalog reads the body
+       text too, so the wider search is one click away rather than a dead end. #}
+    {% if q %}
+    <a class="clear" href="{{ url_for('catalog.list_view', q=q, person=person.id, filtered=1) }}"
+       title="hybrid search over the full text, still only this person">search the text too &rarr;</a>
+    {% endif %}
+  </form>
+  <script src="{{ url_for('static', filename='facets.js') }}" defer></script>
+
+  {% if q or pub_type %}
+  <p class="count">{{ shown }} of {{ total }} credits shown.</p>
+  {% endif %}
+
+  <p class="notice">Credits under-report in three known ways (#12): many records
+  name nobody, podcast fields are patchy, and someone named in a title is not
+  always linked. This list is what the catalog knows, not a complete record.</p>
+
+  {% if hosted %}
+  <p class="count">Also hosted {{ hosted }} podcast episode{{ 's' if hosted != 1 }} —
+  a recurring role rather than output, so it is not counted as a credit.</p>
+  {% endif %}
+
+  {% for role, pubs in by_role.items() %}
+  <section>
+    <h2>{{ {'author': 'Wrote', 'guest': 'Guest on'}.get(role, role) }} <span class="count">{{ pubs | length }}</span></h2>
+    {% for r in pubs %}
+    <article class="row">
+      <div class="meta">
+        <span class="date">{{ r.date_published }}</span>
+        <span class="type">{{ r.pub_type }}</span>
+      </div>
+      <h3><a href="{{ url_for('catalog.pub_view', pub_id=r.id) }}">{{ r.title }}</a></h3>
+      {% if r.summary_one_liner %}<p class="one-liner">{{ r.summary_one_liner }}</p>{% endif %}
+    </article>
+    {% endfor %}
+  </section>
+  {% else %}
+  <p class="empty">{% if q or pub_type %}Nothing here matches — the filter reads
+  titles and summaries, not the body text.{% else %}No credits in the catalog
+  for this person.{% endif %}</p>
+  {% endfor %}
+</article>
+{% endblock %}

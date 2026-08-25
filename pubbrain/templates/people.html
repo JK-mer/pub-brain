@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}People — pub-brain{% endblock %}
+{% block content %}
+<h1>People</h1>
+<p class="count">
+  {% if show_all %}
+  All {{ total }} people — ranked by credits.
+  <a href="{{ url_for('catalog.people_view') }}">current MERICS people only</a>
+  {% else %}
+  {{ people | length }} people currently at MERICS, ranked by credits.
+  {# Never a silent filter: the third most-credited person in the catalog is
+     former staff, and the page must say so rather than imply it is everyone. #}
+  <a href="{{ url_for('catalog.people_view', all=1) }}">show all {{ total }}</a>,
+  including {{ hidden }} former or external — their work is still in the catalog.
+  {% endif %}
+</p>
+<p class="byline">Credits are writing and appearing as a guest. Hosting is shown
+but not counted: a recurring role, not output. See the #12 caveats on any
+person page.</p>
+<table class="people">
+  <thead><tr><th>name</th><th>affiliation</th><th></th><th class="num">credits</th><th class="num">hosted</th></tr></thead>
+  <tbody>
+  {% for p in people %}
+  <tr>
+    <td><a href="{{ url_for('catalog.person_view', person_id=p.id) }}">{{ p.name }}</a></td>
+    <td>{{ p.affiliation or 'unclassified' }}</td>
+    <td>{{ 'current' if p.is_current else '' }}</td>
+    <td class="num">{{ p.n }}</td>
+    <td class="num quiet">{{ p.hosted or '' }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

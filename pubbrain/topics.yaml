@@ -1,0 +1,198 @@
+# The controlled topic vocabulary (#4) — frozen by the owner 2026-08-08.
+# Granularity: the conference-panel test ("which panels would the conference
+# need"). This file is the single source of truth: the glossary (#22) renders
+# it and enrichment maps publications onto it (#4).
+# Keys per topic: slug, name, entails, why. Order is render order.
+#
+# `slug` is the identity, `name` is only the label. The mapping table stores
+# slugs, so renaming a topic costs nothing as long as its meaning is unchanged.
+# What does cost a re-map: changing what a topic covers, splitting one in two,
+# or adding a new one — existing publications will not carry it until
+# `pubbrain map-topics --remap` runs over them. A slug is never reused for a
+# different meaning; retire it and mint a new one instead.
+
+- cluster: Domestic politics & society
+  topics:
+    - slug: xi-party-rule
+      name: Xi Jinping & Party Rule
+      entails: >-
+        Leadership centralization, Party congresses, elite politics, purges,
+        succession.
+      why: >-
+        Everything else in the system bends around how power is held at the
+        top.
+    - slug: security-surveillance
+      name: State Security, Surveillance & Censorship
+      entails: >-
+        The holistic security concept, social credit, information control,
+        cyber governance as control.
+      why: >-
+        The party-state's control toolkit shapes what China does at home and
+        exports abroad.
+    - slug: human-rights
+      name: Human Rights, Xinjiang & Hong Kong
+      entails: >-
+        Repression of minorities and dissent, Hong Kong's absorption,
+        transnational repression.
+      why: The values conflict at the core of Europe-China tension.
+    - slug: society-opinion
+      name: Chinese Society & Public Opinion
+      entails: >-
+        Netizens, nationalism, demographics, labor, youth, religion; what the
+        public actually thinks vs. the official line.
+      why: >-
+        Policy durability depends on a society the leadership must manage, not
+        just command.
+    - slug: propaganda-influence
+      name: Propaganda & Influence Operations
+      entails: >-
+        External messaging, wolf-warrior diplomacy, disinformation, media and
+        elite capture abroad.
+      why: The front line where China's system meets open societies.
+
+- cluster: Economy
+  topics:
+    - slug: macroeconomy
+      name: Macroeconomy & Growth Model
+      entails: >-
+        GDP, property, consumption weakness, deflation, stimulus vs. reform.
+      why: The base layer every China-policy assumption rests on.
+    - slug: industrial-policy
+      name: Industrial Policy & Overcapacity
+      entails: >-
+        Made in China 2025, Five-Year Plans, subsidies, Little Giants, the
+        overcapacity export machine.
+      why: >-
+        Beijing's core instrument, and the direct source of Europe's
+        competitiveness problem.
+    - slug: trade-investment
+      name: Trade & Investment
+      entails: >-
+        Flows in both directions, dependencies, market access, reciprocity.
+      why: The material substance of the relationship, and where leverage lives.
+    - slug: economic-security
+      name: Economic Security, Coercion & De-risking
+      entails: >-
+        Export controls, rare earths, screening, anti-coercion, supply-chain
+        resilience.
+      why: The paradigm Europe's whole China policy reorganized around.
+    - slug: finance-currency
+      name: Finance & Currency
+      entails: >-
+        RMB internationalization, digital currency, financial markets and
+        debt, capital controls.
+      why: >-
+        The least-integrated part of China's economy and a standing what-if
+        for the global system.
+
+- cluster: Technology
+  topics:
+    - slug: semiconductors
+      name: Semiconductors
+      entails: >-
+        The chip war, export controls and their efficacy, domestic catch-up
+        (SMIC, YMTC), chokepoints.
+      why: The single hardest-fought technology front, with its own escalation logic.
+    - slug: ai-emerging-tech
+      name: AI & Emerging Technologies
+      entails: >-
+        AI capability and regulation, quantum, 6G, biotech; DeepSeek-style
+        surprises.
+      why: Where techno-strategic advantage will be decided next decade.
+    - slug: digital-governance
+      name: Digital Governance & Data
+      entails: >-
+        Data laws, platform regulation, cross-border data, standards.
+      why: >-
+        China's regulatory model competes with Europe's, and firms live inside
+        both.
+    - slug: science-innovation
+      name: Science, Research & Innovation System
+      entails: >-
+        The S&T system, talent programs, research collaboration and its
+        dual-use / military-civil-fusion risks.
+      why: >-
+        Europe's universities and labs are an open flank the policy debate
+        keeps circling.
+
+- cluster: Climate & energy
+  topics:
+    - slug: climate-energy
+      name: Climate, Energy & Green Industry
+      entails: >-
+        Climate cooperation, coal vs. renewables, solar / batteries / EVs as
+        industrial fronts.
+      why: The field where cooperation necessity and competition collide hardest.
+
+- cluster: Foreign & security policy
+  topics:
+    - slug: china-russia
+      name: China-Russia
+      entails: >-
+        The partnership's substance and limits, Ukraine, sanctions
+        circumvention, joint revisionism.
+      why: The alignment that most directly threatens European security.
+    - slug: china-us
+      name: China-US Rivalry
+      entails: >-
+        Strategic competition, trade war, tech decoupling, Trump-era
+        volatility.
+      why: The structural rivalry that sets the terms Europe navigates within.
+    - slug: taiwan
+      name: Taiwan
+      entails: >-
+        Cross-strait dynamics, election scenarios, deterrence, European
+        preparedness.
+      why: The flashpoint with the largest conceivable consequences.
+    - slug: military-security
+      name: Military & Security Policy
+      entails: >-
+        PLA modernization and purges, arms race dynamics, South China Sea,
+        China as a security actor.
+      why: Capabilities and intent behind every coercion scenario.
+    - slug: belt-road-global-south
+      name: Belt & Road & the Global South
+      entails: >-
+        BRI and successors (GDI), development finance, presence in Africa,
+        Central Asia and the Balkans.
+      why: Where China builds the constituency for its alternative order.
+    - slug: global-governance
+      name: Global Governance & Multilateralism
+      entails: >-
+        Behavior in the UN, parallel institutions, standards bodies, WHO-style
+        influence.
+      why: The quiet contest over who writes the rules.
+    - slug: indo-pacific
+      name: Indo-Pacific & Regional Dynamics
+      entails: >-
+        Japan, the Koreas, India, ASEAN, regional hedging and alliances.
+      why: The region where China's rise is lived daily and tested first.
+
+- cluster: Europe
+  topics:
+    - slug: eu-china-policy
+      name: EU China Policy
+      entails: >-
+        Strategy and instruments, summits, unity vs. fragmentation, CAI's
+        fate, strategic autonomy.
+      why: The institution-level answer Europe gives — MERICS's home turf.
+    - slug: germany-china
+      name: Germany & China
+      entails: >-
+        From Wandel durch Handel to de-risking, coalition politics, industry
+        ties, the auto question.
+      why: Europe's biggest China relationship and its bellwether.
+    - slug: china-in-europe
+      name: China in Europe
+      entails: >-
+        Member-state relations, CEE / 17+1's decay, coercion cases like
+        Lithuania, FDI footprint, ports and infrastructure.
+      why: Where Chinese leverage becomes concrete on European ground.
+    - slug: foreign-business-in-china
+      name: Foreign Business in China
+      entails: >-
+        Market conditions, chambers' sentiment, localization dilemmas, the
+        pull-in-push-out cycle.
+      why: >-
+        The ground truth of "engagement" and the early-warning system for
+        everything else.

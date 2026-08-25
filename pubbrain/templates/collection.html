@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ collection.name }} — pub-brain{% endblock %}
+{% block content %}
+<h1>{{ collection.name }}</h1>
+<p class="count">{{ members | length }} publication{{ 's' if members | length != 1 }}.
+{% if collection.url %}<a href="{{ collection.url }}" rel="noopener">the project page &nearr;</a>{% endif %}
+Members are found automatically when a publication's own article links here;
+anything missed can be attached by hand on its page, and a hand-attached member
+is never removed by detection.</p>
+
+<form class="flag-bar" method="post"
+      action="{{ url_for('catalog.edit_collection', slug=collection.slug) }}">
+  <input type="text" name="name" value="{{ collection.name }}">
+  <button type="submit">rename</button>
+  {# The slug is the identity `publication_collections` stores, so renaming
+     leaves it alone — and the delete button has to say what goes with it. #}
+  <button type="submit" name="action" value="delete" class="quiet"
+          onclick="return confirm('Delete this project and its {{ members | length }} membership{{ 's' if members | length != 1 }}? The publications themselves stay.')">delete project</button>
+  <span class="byline">id stays <span class="mono">{{ collection.slug }}</span></span>
+</form>
+
+{% for r in members %}
+<article class="row">
+  <div class="meta">
+    <span class="date">{{ r.date_published }}</span>
+    <span class="type">{{ r.pub_type }}</span>
+    {% if r.source == 'manual' %}<span class="badge">by hand</span>{% endif %}
+  </div>
+  <h2><a href="{{ url_for('catalog.pub_view', pub_id=r.id) }}">{{ r.title }}</a></h2>
+  {% if r.summary_one_liner %}<p class="one-liner">{{ r.summary_one_liner }}</p>
+  {% else %}<p class="one-liner none">no enrichment — findable by title only</p>{% endif %}
+  {% if r.series %}<p class="byline">{{ r.series }}</p>{% endif %}
+</article>
+{% else %}
+<p class="empty">Nothing attached yet.</p>
+{% endfor %}
+{% endblock %}

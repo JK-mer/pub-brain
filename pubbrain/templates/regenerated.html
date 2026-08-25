@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}New summary — pub-brain{% endblock %}
+{% block content %}
+<h1>{{ detail.publication.title if detail else 'Publication ' ~ pub_id }}</h1>
+
+{% if error %}
+<p class="notice">No summary was written: <span class="mono">{{ error }}</span>.
+Nothing changed — the existing summary still stands, with whatever flag it
+carried.</p>
+<p><a href="{{ url_for('catalog.pub_view', pub_id=pub_id) }}">Back to the publication</a></p>
+{% else %}
+<p class="count">Written by <span class="mono">{{ meta.model }}</span> in
+{{ meta.attempts }} attempt{{ '' if meta.attempts == 1 else 's' }}.
+{% if is_primary %}
+This publication had no summary, so this one is now its primary.
+{% else %}
+It is a <strong>candidate</strong>: search, the counts and every list still use
+the summary below on the left until you promote it.
+{% endif %}</p>
+
+<section>
+  <h2 class="eyebrow">{{ 'Currently in use' if before else 'Nothing was here before' }}</h2>
+  {% if before %}
+  <article class="topic">
+    <p class="one-liner">{{ before.summary_one_liner }}</p>
+    <p class="byline">{{ before.model }} · {{ before.enriched_at[:10] }}</p>
+  </article>
+  {% else %}
+  <p class="empty">There was no previous summary.</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2 class="eyebrow">{{ 'The new primary' if is_primary else 'The candidate' }}</h2>
+  <article class="topic">
+    <p class="one-liner">{{ after.summary_one_liner }}</p>
+    <p>{{ after.summary_short }}</p>
+    <ul>{% for f in after.key_findings %}<li>{{ f }}</li>{% endfor %}</ul>
+  </article>
+</section>
+
+{% if not is_primary %}
+<form class="flag-bar" method="post" action="{{ url_for('review.promote', pub_id=pub_id, enrichment_id=candidate_id) }}">
+  <button type="submit">▲ make this the primary</button>
+</form>
+<form class="flag-bar" method="post" action="{{ url_for('review.dismiss', pub_id=pub_id, enrichment_id=candidate_id) }}">
+  <button type="submit" class="quiet">✕ dismiss it, keep what is there</button>
+</form>
+{% endif %}
+
+<p><a href="{{ url_for('catalog.pub_view', pub_id=pub_id) }}">Back to the publication</a>
+· <a href="{{ url_for('review.flags_view') }}">Flags</a></p>
+{% endif %}
+{% endblock %}

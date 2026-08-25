@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Shortlist — pub-brain{% endblock %}
+{% block content %}
+<h1>Shortlist</h1>
+<p class="count">{{ rows | length }} publication{{ 's' if rows | length != 1 }}
+you marked as mattering — the only judgement in this catalog that is yours
+rather than scraped or generated. Shortlisted records rank slightly higher in
+search and are badged wherever they appear.</p>
+
+{% for r in rows %}
+<article class="row">
+  <div class="meta">
+    <span class="date">{{ r.date_published }}</span>
+    <span class="type">{{ r.pub_type }}</span>
+    <span class="star" title="shortlisted">★</span>
+  </div>
+  <h2><a href="{{ url_for('catalog.pub_view', pub_id=r.id) }}">{{ r.title }}</a></h2>
+  {% if r.summary_one_liner %}<p class="one-liner">{{ r.summary_one_liner }}</p>{% endif %}
+  {% if r.note %}<p class="byline">“{{ r.note }}”</p>{% endif %}
+  <p class="byline quiet">marked {{ r.added_at[:10] }}</p>
+</article>
+{% else %}
+<p class="empty">Nothing shortlisted yet. Star a publication on its page when it
+mattered — it made waves, it was well received, you keep coming back to it — and
+add a line saying why. The note is the part you will not remember.</p>
+{% endfor %}
+{% endblock %}

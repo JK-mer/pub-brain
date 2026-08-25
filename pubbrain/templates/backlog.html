@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Backlog — pub-brain{% endblock %}
+{% block content %}
+<h1>Backlog</h1>
+<p class="count">What is unfinished, with a link to each. Things that are
+incomplete <em>by design</em> are not listed — a podcast has no summary because
+it has no prose, which is not a task.</p>
+
+{% if todo_rows or url_todo %}
+<section id="handed-over">
+  <h2 class="eyebrow">Handed over — waiting on Claude
+    <span class="count">{{ (todo_rows | length) + (url_todo | length) }}</span></h2>
+  <p class="byline">Your instructions, kept until the work is done. They leave
+  this list when the record is fixed or you park it.</p>
+<ul class="url-list">
+  {% for r in todo_rows %}
+  <li><a href="{{ url_for('catalog.pub_view', pub_id=r.id) }}">{{ r.title[:52] }}</a>
+    <span class="quiet">— {{ r.note or 'no note' }}</span></li>
+  {% endfor %}
+  {% for r in url_todo %}
+  <li><a href="{{ r.url }}" rel="noopener">{{ (r.probe_title or r.url)[:52] }}</a>
+    <span class="quiet">— {{ r.note or 'no note' }}</span></li>
+  {% endfor %}
+</ul>
+</section>
+{% endif %}
+
+<nav class="backlog-jump">
+  {% if todo_rows or url_todo %}<a href="#handed-over">Handed over ({{ (todo_rows | length) + (url_todo | length) }})</a>{% endif %}
+  <a href="#thin">Thin content ({{ thin | length }})</a>
+  <a href="#homeless">Homeless URLs ({{ homeless | length }})</a>
+  <a href="#paywalled">Paywalled ({{ paywalled | length }})</a>
+  <a href="#gone">Gone ({{ gone | length }})</a>
+</nav>
+
+<section id="thin">
+  <h2 class="eyebrow">Content below the expected range <span class="count">{{ thin | length }}</span></h2>
+  <p class="byline">Compared against each type's own median, not a flat number:
+  {% for kind, n in norms | dictsort %}{{ kind }} {{ n[0] }}w{{ ", " if not loop.last }}{% endfor %}.
+  A record is listed below a quarter of that. {{ thin_with_pdf | length }} of
+  these have a PDF whose text is not extracted yet.</p>
+  <table class="people">
+    <thead><tr><th>date</th><th>type</th><th class="num">words</th><th class="num">typical</th><th>title</th><th>pdf</th><th></th></tr></thead>
+    <tbody>
+    {% for r in thin %}
+    <tr>
+      <td class="date">{{ r.date_published }}</td>
+      <td class="type">{{ r.pub_type }}</td>
+      <td class="num">{{ r.word_count }}</td>
+      <td class="num quiet">{{ r.expected }}</td>
+      <td><a href="{{ url_for('catalog.pub_view', pub_id=r.id) }}">{{ r.title }}</a>
+        · <a href="{{ r.url }}" rel="noopener">source &nearr;</a></td>
+      <td>{% if r.pdf_url %}<a href="{{ r.pdf_url }}" rel="noopener">PDF &nearr;</a>{% endif %}</td>
+      <td><form method="post" action="{{ url_for('review.park', pub_id=r.id) }}">
+        <input type="text" name="note" placeholder="note, or what to do" size="18">
+        <button type="submit" name="action" value="todo" title="hand it over with instructions">to&nbsp;do</button>
+        <button type="submit" class="quiet" title="already correct — take it off the list">park</button>
+      </form></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if parked_rows %}
+  <p class="byline">{{ parked_rows | length }} record{{ 's' if parked_rows | length != 1 }}
+  parked as correct-as-is.
+  <a href="{{ url_for('review.backlog_view', parked=None if show_parked else 1) }}">{{ 'hide them' if show_parked else 'show them' }}</a></p>
+  {% if show_parked %}
+  <ul class="url-list">
+    {% for r in parked_rows %}
+    <li><a href="{{ url_for('catalog.pub_view', pub_id=r.id) }}">{{ r.title[:64] }}</a>
+      {% if r.note %}<span class="quiet">— {{ r.note }}</span>{% endif %}
+      <form method="post" style="display:inline" action="{{ url_for('review.park', pub_id=r.id) }}">
+        <button type="submit" name="action" value="unpark" class="quiet">unpark</button>
+      </form></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% endif %}
+</section>
+
+<section id="homeless">
+  <h2 class="eyebrow">Homeless URLs <span class="count">{{ homeless | length }}</span></h2>
+  <p class="byline">Root-level merics.org pages with no type prefix, never
+  ingested (#10). <strong>Proposed</strong> is measured, not guessed: Drupal
+  titles every event page "Registration form", and the rest separate on whether
+  a page carries its own date and real prose — events run to ~64 words with no
+  date. The default title catches most events but not all, so correct the
+  exceptions and confirm the rest in bulk.</p>
+
+  <form method="post" action="{{ url_for('review.url_dispositions') }}">
+    <p class="bulk-bar">
+      <button type="button" onclick="pick('ingest')">tick all proposed ingest</button>
+      <button type="button" onclick="pick('exclude')">tick all proposed exclude</button>
+      <button type="button" onclick="pick(null)">tick none</button>
+      <input type="text" name="bulk_note" placeholder="note for the selected (optional)" size="26">
+      <button type="submit" name="disposition" value="exclude">exclude selected</button>
+      <button type="submit" name="disposition" value="todo">hand selected to Claude</button>
+    </p>
+    <table class="people">
+      <thead><tr><th></th><th class="num">words</th><th>date</th><th>page</th><th>proposed</th><th>note · exclude · hand over</th></tr></thead>
+      <tbody>
+      {% for r in homeless %}
+      <tr>
+        <td><input type="checkbox" name="url" value="{{ r.url }}"
+                   class="pick" data-proposed="{{ r.disposition or '' }}"></td>
+        <td class="num">{{ r.probe_words if r.probe_words is not none else '?' }}</td>
+        <td>{{ '✓' if r.probe_has_date else '' }}</td>
+        <td><a href="{{ r.url }}" rel="noopener">{{ (r.probe_title or r.url.replace('https://merics.org/en/', ''))[:72] }}</a></td>
+        <td class="quiet">{{ r.disposition or '—' }}{% if r.note %} · {{ r.note }}{% endif %}</td>
+        <td class="row-actions">
+          <input type="text" name="note__{{ r.url }}" value="{{ r.note or '' }}"
+                 placeholder="note" size="20">
+          <button type="submit" name="exclude" value="{{ r.url }}"
+                  formaction="{{ url_for('review.url_row') }}"
+                  title="exclude and drop it from the list">exclude</button>
+          <button type="submit" name="claude" value="{{ r.url }}"
+                  formaction="{{ url_for('review.url_row') }}"
+                  title="hand it over with the note">claude</button>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </form>
+  <script>
+    function pick(kind) {
+      document.querySelectorAll('input.pick').forEach(function (cb) {
+        cb.checked = kind !== null && cb.dataset.proposed === kind;
+      });
+    }
+    /* Shift-click selects the range from the last box you touched, the way a
+       file manager does — ticking 60 rows one at a time is not a workflow. */
+    (function () {
+      var boxes = Array.prototype.slice.call(document.querySelectorAll('input.pick'));
+      var anchor = null;
+      boxes.forEach(function (cb, i) {
+        cb.addEventListener('click', function (e) {
+          if (e.shiftKey && anchor !== null) {
+            var lo = Math.min(anchor, i), hi = Math.max(anchor, i);
+            for (var j = lo; j <= hi; j++) boxes[j].checked = cb.checked;
+          }
+          anchor = i;
+        });
+      });
+    })();
+  </script>
+</section>
+
+<section id="paywalled">
+  <h2 class="eyebrow">Paywalled, no text <span class="count">{{ paywalled | length }}</span></h2>
+  <p class="byline">Member-only pages. The text is behind the paywall, so it can
+  only ever arrive by hand.</p>
+  <ul class="url-list">
+    {% for r in paywalled %}
+    <li><a href="{{ url_for('catalog.pub_view', pub_id=r.id) }}">{{ r.title }}</a>
+      <span class="quiet">{{ r.date_published }} · {{ r.pub_type }}</span>
+      · <a href="{{ r.url }}" rel="noopener">source &nearr;</a></li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section id="gone">
+  <h2 class="eyebrow">Gone from merics.org <span class="count">{{ gone | length }}</span></h2>
+  <p class="byline">Listed in the sitemap but no longer served (#13). Not
+  retried; recorded so an absence claim can own them.</p>
+  <ul class="url-list">
+    {% for r in gone %}
+    <li>{{ r.url.replace('https://merics.org/en/', '') }}
+      <span class="quiet">{{ r.last_error }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section>
+  <h2 class="eyebrow">Pipeline</h2>
+  <p class="count">{{ undownloaded_pdfs }} PDFs linked but not downloaded (#6) ·
+  {{ unmapped }} summaries not mapped to topics (#4)</p>
+</section>
+{% endblock %}

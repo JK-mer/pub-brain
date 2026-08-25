@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Coverage — pub-brain{% endblock %}
+{% block content %}
+<h1>Coverage</h1>
+<p class="lede">Has MERICS covered it? The one question the site chatbot cannot
+answer reliably — a no needs the whole catalog, not the top of one search.
+Every verdict here is counted, never generated, and carries its own limits.</p>
+
+<form method="get" action="{{ url_for('insights.coverage_page') }}" class="ask">
+  <input type="search" name="term" value="{{ term }}" autofocus
+         placeholder="a topic, a term, a name — e.g. Seltene Erden">
+  <button type="submit">Check</button>
+</form>
+
+{% if result %}
+{% if result.error %}
+<p class="notice">The search itself failed: <span class="mono">{{ result.error }}</span>.
+That says nothing about coverage — try simpler words.</p>
+{% else %}
+
+{% set v = result.verdict %}
+<section class="verdict" aria-label="Coverage verdict">
+  <div class="verdict-scale{% if v.band is none %} unknown{% endif %}">
+    {% for name in ['not covered here', 'adjacent only', 'touched', 'covered', 'covered extensively'] %}
+    <div class="verdict-band b{{ loop.index0 }}{% if v.band == loop.index0 %} on{% endif %}">
+      <span>{{ name }}</span>
+    </div>
+    {% endfor %}
+    {% if v.pos is not none %}
+    <div class="verdict-needle" style="left: {{ (v.pos * 100) | round(2) }}%"
+         aria-hidden="true"></div>
+    {% endif %}
+  </div>
+  <p class="verdict-line"><strong>{{ v.label }}</strong> — {{ v.measured }}.</p>
+  {% for note in result.notes %}<p class="notice">{{ note }}</p>{% endfor %}
+</section>
+
+<div class="cov-grid">
+<section>
+  <h2 class="eyebrow">Direct evidence
+    <span class="count">{{ result.about }} about · {{ result.mentions }} mention</span></h2>
+  {% if result.hits %}
+  <p class="count">Best full-text matches, whole catalog — weighted by type
+  this evidence counts {{ result.weighted }}.</p>
+  {% for h in result.hits %}
+  <article class="row">
+    <div class="meta">
+      <span class="date">{{ h.date_published }}</span>
+      <span class="type">{{ h.pub_type }}</span>
+    </div>
+    <h2><a href="{{ url_for('catalog.pub_view', pub_id=h.id) }}">{{ h.title }}</a></h2>
+    {% if h.snippet %}<p class="one-liner">{{ h.snippet }}</p>{% endif %}
+  </article>
+  {% endfor %}
+  {% else %}
+  <p class="count">No publication matches these words in title, standfirst or
+  body. Whether that means uncovered or differently worded, the adjacent
+  ground decides.</p>
+  {% endif %}
+  {% if result.site_tags %}
+  <p class="byline">site tags: {% for t in result.site_tags %}<a
+    href="{{ url_for('catalog.pub_view', pub_id=t.id) }}">{{ t.tag }}</a>{{ ", " if not loop.last }}{% endfor %}</p>
+  {% endif %}
+  {% if result.people %}
+  <p class="byline">people matching the term:
+  {% for p in result.people %}<a href="{{ url_for('catalog.person_view', person_id=p.id) }}">{{ p.name }}</a>
+  ({{ p.n }}){{ ", " if not loop.last }}{% endfor %}</p>
+  {% endif %}
+</section>
+
+<section>
+  <h2 class="eyebrow">Adjacent ground
+    <span class="count">{{ result.neighbours | length }} nearest by meaning</span></h2>
+  {% if result.neighbours %}
+  <p class="count">The closest publications in embedding space — what the
+  catalog holds <em>around</em> the term, matched or not.</p>
+  {% if result.adjacent_topics %}
+  <p class="cov-chips">{% for t in result.adjacent_topics %}<span class="chip">{{ t.label }}
+    <span class="count-mono">{{ t.n }}</span></span>{% endfor %}</p>
+  {% endif %}
+  {% for n in result.neighbours %}
+  <article class="row">
+    <div class="meta">
+      <span class="date">{{ n.date }}</span>
+      <span class="type">{{ n.type }}</span>
+      <span class="sim-wrap"><span class="sim-bar" style="width: {{ (n.sim * 100) | round }}%"></span></span>
+      <span class="count-mono">{{ (n.sim * 100) | round | int }}%</span>
+    </div>
+    <h2><a href="{{ url_for('catalog.pub_view', pub_id=n.id) }}">{{ n.title }}</a></h2>
+    {% if n.one_liner %}<p class="one-liner">{{ n.one_liner }}</p>{% endif %}
+  </article>
+  {% endfor %}
+  {% if result.adjacent_people %}
+  <p class="byline">who covers this ground:
+  {% for p in result.adjacent_people[:8] %}<a
+    href="{{ url_for('catalog.person_view', person_id=p.id) }}">{{ p.name }}</a>
+  ({{ p.n }}){{ ", " if not loop.last }}{% endfor %}</p>
+  {% endif %}
+  {% else %}
+  <p class="count">The adjacency scan did not run — see the note above.</p>
+  {% endif %}
+</section>
+</div>
+
+{% if result.term_xy %}
+<h2 class="eyebrow">Where the term lands</h2>
+<figure class="map-stage scape-stage cov-stage"
+        aria-label="The queried term placed on the embedding landscape">
+  <svg id="cov-scape" role="img"></svg>
+</figure>
+<p class="scope-note">The query dropped onto the <a
+  href="{{ url_for('insights.landscape_view') }}">landscape</a> exactly as a
+new publication would be — inside a cluster means the neighbourhood exists;
+open ground is the negative space itself. Ringed points are the neighbours
+listed above. Computed per visit, never saved: the map stays publications
+only.</p>
+<script>
+  const COV = {
+    term: {{ result.term_xy | tojson }},
+    label: {{ term | tojson }},
+    neighbours: {{ result.neighbours | map(attribute='id') | list | tojson }},
+    data: "{{ url_for('insights.landscape_data') }}",
+  };
+</script>
+<script src="{{ url_for('static', filename='coverage.js') }}"></script>
+{% endif %}
+
+<h2 class="eyebrow">What bounds this answer</h2>
+<ul class="cov-caveats">
+  {% for c in result.caveats %}<li>{{ c }}</li>{% endfor %}
+</ul>
+
+{% endif %}
+{% else %}
+<p class="scope-note">The verdict runs on two counted tiers — publications
+<em>about</em> a term (title or standfirst) and publications that merely
+<em>mention</em> it — plus an embedding scan for ground covered under
+different words, which also works across languages. Absence claims are
+bounded by the measured caveats printed with every result. Data: <span
+class="mono">data/coverage.json?term=…</span></p>
+{% endif %}
+{% endblock %}

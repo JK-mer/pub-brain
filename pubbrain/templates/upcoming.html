@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Upcoming — pub-brain{% endblock %}
+{% block content %}
+<h1>Upcoming</h1>
+<p class="count">What MERICS is about to publish, entered by hand. The catalog
+knows what is published; this is the other half, and it is the one thing here
+that is <strong>not</strong> public material — notes stay on this machine:
+never searched, never embedded, never sent to a model or an MCP client.</p>
+
+{% if request.args.get('error') %}
+<p class="notice error">{{ request.args.get('error') }}</p>
+{% endif %}
+
+<details class="add-note" {% if not open and not editing %}open{% endif %}>
+  <summary>Add a note</summary>
+  {% with note = None, action = url_for('upcoming.create_note'),
+          quarter_options = quarters %}
+    {% include "_upcoming_form.html" %}
+  {% endwith %}
+</details>
+
+{% if stats %}
+<section class="planned-actual">
+  <h2>Planned against actual</h2>
+  <p class="count">
+    {% if stats.median_lead_days is not none %}
+    Median lead time <strong>{{ stats.median_lead_days | round | int }} days</strong>
+    over {{ stats.lead_sample }} note{{ "s" if stats.lead_sample != 1 }} noted
+    before the piece appeared.
+    {% endif %}
+    {% if stats.judged %}
+    Expected quarter was right <strong>{{ stats.on_time }} of {{ stats.judged }}</strong>
+    times.
+    {% endif %}
+    {{ stats.shelved }} shelved.
+  </p>
+</section>
+{% endif %}
+
+<h2>Expected</h2>
+{% for n in open %}
+<article class="row upcoming {% if editing == n.id %}editing{% endif %}">
+  <div class="meta">
+    <span class="date">{{ n.expected or "unplaced" }}</span>
+  </div>
+  <h3>{{ n.working_title }}</h3>
+  {% if n.note %}<p class="plain">{{ n.note }}</p>{% endif %}
+  {% if n.topics or n.people %}
+  <p class="topic-chips">
+    {% for t in n.topics %}<a class="chip"
+      href="{{ url_for('catalog.list_view', topic=t.slug, filtered=1) }}"
+      title="what is already published on this">{{ t.label }}</a>{% endfor %}
+    {% for p in n.people %}<a class="chip quiet"
+      href="{{ url_for('catalog.person_view', person_id=p.id) }}">{{ p.name }}</a>{% endfor %}
+  </p>
+  {% endif %}
+  <p class="byline">noted {{ n.age_days }} day{{ "s" if n.age_days != 1 }} ago
+    &middot; <a href="{{ url_for('upcoming.upcoming_view', edit=n.id) }}#note-{{ n.id }}">edit</a>
+  </p>
+
+  <div id="note-{{ n.id }}" class="note-actions">
+    {% if editing == n.id %}
+    {% with note = n, action = url_for('upcoming.edit_note', note_id=n.id),
+            quarter_options = quarters_for(n) %}
+      {% include "_upcoming_form.html" %}
+    {% endwith %}
+    {% endif %}
+
+    <details class="link-form" data-endpoint="{{ url_for('catalog.pubs_search') }}">
+      <summary>it landed</summary>
+      <form class="flag-bar" method="post"
+            action="{{ url_for('upcoming.link_note', note_id=n.id) }}">
+        <span class="picker">
+          <input type="search" data-pub-search autocomplete="off"
+                 placeholder="which publication">
+          <ul class="suggestions" hidden></ul>
+        </span>
+        <input type="hidden" name="publication_id" data-pub-id>
+        <button type="submit">link</button>
+        <span class="byline">picked by hand, always — nothing auto-links (#56)</span>
+      </form>
+    </details>
+
+    <details class="shelve-form">
+      <summary>shelve it</summary>
+      <form class="flag-bar" method="post"
+            action="{{ url_for('upcoming.shelve_note', note_id=n.id) }}">
+        <input type="text" name="reason" required
+               placeholder="why it is not happening">
+        <button type="submit" class="quiet">shelve</button>
+        <span class="byline">the reason is the point: a miss only teaches
+          anything if it stays legible</span>
+      </form>
+    </details>
+  </div>
+</article>
+{% else %}
+<p class="empty">Nothing noted yet — add the next thing you know is coming.</p>
+{% endfor %}
+
+{% if closed %}
+<details class="closed-notes">
+  <summary>Landed and shelved ({{ closed | length }})</summary>
+  {% for n in closed %}
+  <article class="row upcoming closed">
+    <div class="meta">
+      <span class="date">{{ n.actual or n.expected or "—" }}</span>
+      <span class="badge {{ n.status }}">{{ n.status }}</span>
+    </div>
+    <h3>
+      {% if n.status == 'landed' %}
+      <a href="{{ url_for('catalog.pub_view', pub_id=n.landed_publication_id) }}">{{ n.pub_title }}</a>
+      {% else %}{{ n.working_title }}{% endif %}
+    </h3>
+    {% if n.status == 'landed' %}
+    <p class="byline">noted as &ldquo;{{ n.working_title }}&rdquo;
+      {%- if n.lead_days is not none %} &middot; {{ n.lead_days }} days ahead{% endif %}
+      {%- if n.on_time is not none %} &middot; expected {{ n.expected }},
+      {{ "as forecast" if n.on_time else "landed " ~ n.actual }}{% endif %}</p>
+    {% else %}
+    <p class="byline">shelved: {{ n.shelved_reason }}</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('upcoming.reopen_note', note_id=n.id) }}">
+      <button type="submit" class="quiet">reopen</button>
+    </form>
+  </article>
+  {% endfor %}
+</details>
+{% endif %}
+
+<script src="{{ url_for('static', filename='upcoming.js') }}"></script>
+{% endblock %}

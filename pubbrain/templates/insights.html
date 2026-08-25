@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Insights — pub-brain{% endblock %}
+{% block content %}
+<h1>Insights</h1>
+<p class="lede">The shape of the catalog, drawn from its own data — every view
+clicks through to the records behind it.</p>
+
+<div class="tiles">
+  <a class="tile live" href="{{ url_for('insights.topic_map_view') }}">
+    <svg class="glyph" viewBox="0 0 64 40" aria-hidden="true">
+      <line x1="14" y1="12" x2="34" y2="26"/><line x1="34" y1="26" x2="52" y2="10"/>
+      <line x1="14" y1="12" x2="52" y2="10"/><line x1="34" y1="26" x2="22" y2="34"/>
+      <circle cx="14" cy="12" r="6"/><circle cx="34" cy="26" r="8"/>
+      <circle cx="52" cy="10" r="4"/><circle cx="22" cy="34" r="3"/>
+    </svg>
+    <span class="tile-name">Topic map</span>
+    <span class="tile-desc">26 topics, drawn together by the publications they
+    share. The mind map of what MERICS writes about.</span>
+    <span class="tile-stat">{{ topics_n }} topics · {{ edges_n }} strong links</span>
+  </a>
+
+  <a class="tile live" href="{{ url_for('insights.topic_time_view') }}">
+    <svg class="glyph" viewBox="0 0 64 40" aria-hidden="true">
+      <path d="M2 30 C 12 30, 14 18, 24 18 S 40 26, 48 24 62 12, 62 12
+               L 62 34 L 2 34 Z"/>
+      <path d="M2 24 C 14 22, 20 10, 30 12 S 44 20, 62 6 L 62 12 C 44 26, 40 28,
+               30 24 S 14 26, 2 30 Z" opacity=".45"/>
+    </svg>
+    <span class="tile-name">Attention over time</span>
+    <span class="tile-desc">What the institute pivoted toward, quarter by
+    quarter — the top topics as flowing bands.</span>
+    <span class="tile-stat">{{ quarters }} quarters · top 8 of {{ topics_n }} topics</span>
+  </a>
+
+  <a class="tile live" href="{{ url_for('insights.landscape_view') }}">
+    <svg class="glyph" viewBox="0 0 64 40" aria-hidden="true">
+      <circle cx="14" cy="12" r="2.5"/><circle cx="20" cy="16" r="2"/>
+      <circle cx="16" cy="20" r="3"/><circle cx="44" cy="10" r="2"/>
+      <circle cx="50" cy="14" r="3"/><circle cx="47" cy="20" r="2"/>
+      <circle cx="30" cy="30" r="2.5"/><circle cx="36" cy="32" r="2"/>
+      <circle cx="33" cy="26" r="2"/><circle cx="55" cy="32" r="1.5"/>
+    </svg>
+    <span class="tile-name">Landscape</span>
+    <span class="tile-desc">Every summarized publication placed by meaning —
+    clusters the vocabulary doesn't know about yet.</span>
+    <span class="tile-stat">{{ "{:,}".format(placed) }} publications placed</span>
+  </a>
+
+  <a class="tile live" href="{{ url_for('insights.coverage_page') }}">
+    <svg class="glyph" viewBox="0 0 64 40" aria-hidden="true">
+      <circle cx="12" cy="10" r="2.5"/><circle cx="18" cy="14" r="2"/>
+      <circle cx="13" cy="19" r="3"/><circle cx="20" cy="24" r="2"/>
+      <circle cx="14" cy="30" r="2"/><circle cx="24" cy="32" r="2.5"/>
+      <circle cx="26" cy="9" r="2"/>
+      <circle cx="46" cy="21" r="9" style="fill:none" stroke-dasharray="3 3"/>
+      <line x1="41" y1="21" x2="51" y2="21"/><line x1="46" y1="16" x2="46" y2="26"/>
+    </svg>
+    <span class="tile-name">Coverage</span>
+    <span class="tile-desc">Has MERICS covered it? A counted verdict, the
+    ground around the term — and what bounds every no.</span>
+    <span class="tile-stat">{{ caveats_n }} caveats currently bound an absence claim</span>
+  </a>
+
+  <a class="tile live" href="{{ url_for('insights.matrix_view') }}">
+    <svg class="glyph" viewBox="0 0 64 40" aria-hidden="true">
+      {% for y in range(4) %}{% for x in range(7) %}
+      <rect x="{{ 6 + x * 8 }}" y="{{ 5 + y * 9 }}" width="6" height="7"
+            opacity="{{ [0.15, 0.9, 0.4, 0.65, 0.25, 0.8, 0.1][(x * 3 + y * 5) % 7] }}"/>
+      {% endfor %}{% endfor %}
+    </svg>
+    <span class="tile-name">Who knows what</span>
+    <span class="tile-desc">Analyst × topic — the institute's expertise as one
+    screen, feeding the author cheat sheets.</span>
+    <span class="tile-stat">{{ current_people }} current people × {{ topics_n }} topics</span>
+  </a>
+</div>
+
+<p class="scope-note">Scope, stated once for every view here: <strong>{{ podcasts }}
+podcasts are excluded</strong> — they carry no text and no topics until they are
+transcribed (#50) — and chapters count through their parent report. Topic data
+covers {{ mapped }} publications.</p>
+{% endblock %}

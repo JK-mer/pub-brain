@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Glossary — pub-brain{% endblock %}
+{% block content %}
+<h1>Glossary</h1>
+<p class="count">The controlled topic vocabulary (#4), frozen 2026-08-08 —
+the conference-panel view of what MERICS covers: what each topic entails and
+why it matters. Maintained in <span class="mono">pubbrain/topics.yaml</span>.</p>
+
+{% for c in clusters %}
+<section>
+  <h2 class="eyebrow">{{ c.cluster }} <span class="count">{{ c.topics | length }}</span></h2>
+  {% for t in c.topics %}
+  <article class="topic">
+    <h3>{{ t.name }}</h3>
+    <p class="entails">{{ t.entails }}</p>
+    <p class="why">{{ t.why }}</p>
+    <p class="topic-counts">
+      {# Two numbers, because one would mislead: a piece that merely touches a
+         topic is not a piece about it. `filtered=1` opts out of the saved
+         default type filter — these counts are over the whole catalog, and a
+         default that quietly halved them would make the link look broken. #}
+      <a class="chip" href="{{ url_for('catalog.list_view', topic=t.slug, primary='1', filtered='1') }}"
+        >{{ primary.get(t.slug, 0) }} about this</a>
+      <a class="chip quiet" href="{{ url_for('catalog.list_view', topic=t.slug, filtered='1') }}"
+        >{{ counts.get(t.slug, 0) }} touching it</a>
+    </p>
+  </article>
+  {% endfor %}
+</section>
+{% endfor %}
+
+<p class="notice">{{ mapped }} of {{ summarized }} summarized publications are
+mapped, out of {{ catalog }} in the catalog. The difference is records with no
+body text to summarize — the podcasts and the paywalled handful — so a topic
+never reaches them and these counts under-report by that much.</p>
+{% endblock %}

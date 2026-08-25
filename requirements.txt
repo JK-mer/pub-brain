@@ -1,0 +1,5 @@
+requests>=2.31
+beautifulsoup4>=4.12
+flask>=3.0
+pyyaml>=6.0
+mcp>=1.9          # MCP server only; every other command runs without it

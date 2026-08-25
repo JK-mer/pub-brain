@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Landscape — pub-brain{% endblock %}
+{% block content %}
+<h1>Landscape</h1>
+
+<section id="scape-root">
+<div class="filters map-controls">
+  <input type="search" id="scape-find" placeholder="find on the map — title or one-liner…"
+         aria-label="Find publications on the landscape">
+  <span class="count-mono" id="find-count" aria-live="polite"></span>
+  <button type="button" id="reset-view">reset view</button>
+  <button type="button" id="fullscreen">fullscreen</button>
+</div>
+
+<div class="scape-legend" id="scape-legend" role="group"
+     aria-label="Topic clusters — click to mute"></div>
+
+<figure class="map-stage scape-stage"
+        aria-label="Embedding landscape: one point per summarized publication">
+  <svg id="scape" role="img"></svg>
+  <div class="viz-tip" id="scape-tip" hidden></div>
+  <div class="scape-empty" id="scape-empty" hidden>
+    <p>No layout yet. Compute it once:</p>
+    <p class="mono">python -m pubbrain landscape</p>
+  </div>
+</figure>
+</section>
+
+<p class="scope-note">One point per summarized publication, placed by the
+meaning of its one-liner — neighbours read alike, whatever the vocabulary says.
+Size — type weight (a Report counts 8, a Comment 1); color — the cluster of
+the primary topic, named exactly in the tooltip. The layout is computed once
+and cached, so it is the same picture on every visit and a place, once
+learned, stays learned. New publications are slotted in beside their
+neighbours without moving anyone. Podcasts excluded (#50). Data:
+<a href="{{ url_for('insights.landscape_data') }}" class="mono">landscape.json</a></p>
+
+<script>
+  const SCAPE_URLS = {
+    data: "{{ url_for('insights.landscape_data') }}",
+    pub: "{{ url_for('catalog.pub_view', pub_id=0) }}".replace("/0", "/"),
+  };
+</script>
+<script src="{{ url_for('static', filename='landscape.js') }}"></script>
+{% endblock %}

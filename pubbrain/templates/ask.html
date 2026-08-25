@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Ask — pub-brain{% endblock %}
+{% block content %}
+<h1>Ask the catalog</h1>
+<p class="count">A question is answered from the records a search retrieves for
+it — nothing else. The retrieved records are always listed below the answer, so
+a thin answer can be told apart from a thin search.</p>
+
+<form method="get" action="{{ url_for('learning.ask_view') }}" class="ask">
+  <input type="search" name="q" value="{{ question }}" autofocus
+         placeholder="What has MERICS published on export controls?">
+  <button type="submit">Ask</button>
+</form>
+
+{% if error %}
+<p class="notice">The model could not be reached: <span class="mono">{{ error }}</span>.
+Search still works — the catalog does not depend on it.</p>
+{% endif %}
+
+{% if result %}
+<article class="answer">
+  {# The href comes from the retrieved row, never from the model: a fabricated
+     URL would render identically to a real one, which is the same failure the
+     id check exists to catch (#44). #}
+  {% for part in result.segments %}{% if part.cite %}<a class="cite"
+    href="{{ part.cite.url }}" rel="noopener"
+    title="{{ part.cite.title }} — on merics.org">[{{ part.cite.id }}]</a>{% else %}{{ part.text }}{% endif %}{% endfor %}
+</article>
+
+{% if result.invalid %}
+<p class="notice">The answer cited {{ result.invalid | join(', ') }}, which
+{{ 'was' if result.invalid | length == 1 else 'were' }} not among the retrieved
+records. Those citations are shown as plain text, not links — treat the claims
+attached to them as unsupported.</p>
+{% endif %}
+
+{% for note in result.notes %}
+<p class="notice">{{ note }}</p>
+{% endfor %}
+
+{% if result.cited %}
+<h2 class="eyebrow">Cited <span class="count">{{ result.cited | length }}</span></h2>
+{% for p in result.cited %}
+<article class="row">
+  <div class="meta">
+    <span class="date">{{ p.date_published }}</span>
+    <span class="type">{{ p.pub_type }}</span>
+  </div>
+  <h2><a href="{{ p.url }}" rel="noopener">{{ p.title }}</a></h2>
+  <p class="links"><a href="{{ url_for('catalog.pub_view', pub_id=p.id) }}">in the catalog</a></p>
+</article>
+{% endfor %}
+{% endif %}
+
+{% if result.hits %}
+<h2 class="eyebrow">Retrieved <span class="count">{{ result.hits | length }}</span></h2>
+<p class="count">Everything the search returned, in rank order. What the answer
+ignored is as informative as what it used.</p>
+{% for h in result.hits %}
+<article class="row">
+  <div class="meta">
+    <span class="date">{{ h.publication.date_published }}</span>
+    <span class="type">{{ h.publication.pub_type }}</span>
+    <span class="mono">{{ h.rankers }}</span>
+  </div>
+  <h2><a href="{{ h.publication.url }}" rel="noopener">{{ h.publication.title }}</a></h2>
+  <p class="links"><a href="{{ url_for('catalog.pub_view', pub_id=h.publication.id) }}">in the catalog</a></p>
+  {% if h.one_liner %}<p class="one-liner">{{ h.one_liner }}</p>
+  {% else %}<p class="one-liner empty">no enrichment — title only</p>{% endif %}
+  {% if h.section and h.section.heading %}<p class="byline">§ {{ h.section.heading }}</p>{% endif %}
+</article>
+{% endfor %}
+{% endif %}
+
+{% if result.usage %}
+<p class="byline">{{ result.usage.model }} · {{ result.usage.seconds }}s ·
+{{ result.usage.prompt_tokens }} in / {{ result.usage.completion_tokens }} out</p>
+{% endif %}
+{% endif %}
+{% endblock %}

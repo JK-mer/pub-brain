@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Settings — pub-brain{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+<p class="count">What is in effect right now. Model choice is still per call —
+there is nowhere to persist it yet (#26).</p>
+
+{% if saved %}<p class="notice">Default view saved.</p>{% endif %}
+
+<section>
+  <h2 class="eyebrow">Default catalog view</h2>
+  <p class="byline">Which types the catalog opens with. It is applied only when
+  no filter is in the URL, so an explicit selection always wins, and the catalog
+  says when the default is in effect. Save none to open on everything.</p>
+  <form method="post" action="{{ url_for('review.save_default_view') }}" class="default-view">
+    {% for t in types %}
+    <label><input type="checkbox" name="type" value="{{ t.pub_type }}"
+      {% if t.pub_type in default_types %}checked{% endif %}> {{ t.pub_type }}
+      <span class="quiet">{{ t.n }}</span></label>
+    {% endfor %}
+    <button type="submit">Save</button>
+  </form>
+</section>
+
+<section>
+  <h2 class="eyebrow">Language models</h2>
+  <table class="people">
+    <thead><tr><th>provider</th><th>models available</th><th>endpoint</th><th>key</th></tr></thead>
+    <tbody>
+    {% for p in providers %}
+    <tr>
+      <td>{{ p.name }}{% if p.is_default %} <span class="badge">default</span>{% endif %}</td>
+      <td class="mono">
+        {# The shortlist the picker offers, and how many the provider actually
+           carries. Showing only the default once left a configured model
+           unreachable (#39); showing an aggregator's full catalogue of
+           hundreds would be no more usable. #}
+        {% for m in p.models %}<div>{{ m }}{% if m == p.default_model %}
+          <span class="badge">default</span>{% endif %}</div>{% endfor %}
+        {% if p.catalogue and p.catalogue > p.models | length %}
+        <div class="quiet">{{ p.catalogue }} available; these are the ones offered</div>
+        {% elif not p.catalogue %}
+        <div class="quiet">catalogue could not be listed</div>
+        {% endif %}
+      </td>
+      <td class="mono quiet">{{ p.base_url }}</td>
+      <td>{{ 'in keyring' if p.key_present else 'not found' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="byline">Any of these can be picked when writing a second summary on
+  a publication page — a regeneration adds a candidate and never replaces the
+  summary in use (#18).</p>
+  <p class="byline">Keys are read from the desktop keyring with
+  <span class="mono">secret-tool</span> at call time — never from a file, an
+  environment variable or this page. A headless deployment has no unlocked
+  keyring and needs that solved first (#8).</p>
+</section>
+
+<section>
+  <h2 class="eyebrow">Embeddings</h2>
+  <p>Local via ollama: <span class="mono">{{ embed_model }}</span>. If ollama is
+  not running, search degrades to keyword ranking and says so rather than
+  quietly returning worse results.</p>
+</section>
+
+<section>
+  <h2 class="eyebrow">Catalog</h2>
+  <p class="count">{{ status.publications }} publications ·
+  {{ status.enriched }} with a summary ·
+  {{ status.mapped }} mapped to topics ·
+  {{ status.sections }} sections</p>
+  {% for w in status.warnings %}<p class="notice">{{ w }}</p>{% endfor %}
+</section>
+{% endblock %}

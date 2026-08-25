@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Flags — pub-brain{% endblock %}
+{% block content %}
+<h1>Flagged summaries</h1>
+<p class="count">Trust is the default: a summary needs no approval, only a flag
+when it misleads. Flag from any publication page. Spot-check record:
+<span class="mono">{{ stats.confirmed }}</span> checked ok,
+<span class="mono">{{ stats.flagged }}</span> flagged,
+of <span class="mono">{{ stats.enriched }}</span> enriched.</p>
+
+{% for r in rows %}
+<article class="row">
+  <div class="meta">
+    <span class="date">{{ r.date_published }}</span>
+    <span class="type">{{ r.pub_type }}</span>
+  </div>
+  <h2><a href="{{ url_for('catalog.pub_view', pub_id=r.id) }}">{{ r.title }}</a></h2>
+  <p class="one-liner">{{ r.summary_one_liner }}</p>
+  <p class="byline">⚑ {{ r.note or 'no note' }} — {{ r.flagged_at[:10] }} · {{ r.model }}{% if not r.is_primary %}
+    · <em>on a candidate, not the summary in use</em>{% endif %}</p>
+</article>
+{% else %}
+<p class="empty">Nothing flagged. When a summary misleads you, flag it on its
+publication page — the flag and your note land here.</p>
+{% endfor %}
+{% endblock %}

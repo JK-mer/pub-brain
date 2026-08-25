@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Attention over time — pub-brain{% endblock %}
+{% block content %}
+<h1>Attention over time</h1>
+
+<section id="time-root">
+<div class="filters map-controls">
+  <label>measure</label>
+  <div class="seg" role="group" aria-label="measure">
+    <button type="button" data-measure="w" class="on">output</button>
+    <button type="button" data-measure="words">words</button>
+  </div>
+  <span class="clear" id="measure-note">weighted by type — a Report counts 8, a Comment 1</span>
+  <button type="button" id="fullscreen">fullscreen</button>
+</div>
+
+<figure class="stream-stage" aria-label="Topic attention per quarter">
+  <svg id="stream" role="img"></svg>
+  <div class="viz-tip" id="tip" hidden></div>
+</figure>
+
+<div class="stream-legend" id="legend" aria-label="topics"></div>
+
+<div class="drill" id="drill">
+  <h2 class="eyebrow">One topic — or any keyword
+    <label class="count"><select id="drill-pick"><option value="">pick a topic…</option></select></label>
+  </h2>
+  <form class="filters kw-form" id="kw-form">
+    <input type="search" id="kw"
+           placeholder="type any term — Beidaihe, lithium, Scholz…">
+    <button type="submit">draw</button>
+    <label class="clear"><input type="checkbox" id="kw-deep">
+      match anywhere in the text, not just headline &amp; summary</label>
+  </form>
+  <div id="drill-body"><p class="panel-hint mono">Click a band, a legend chip,
+  pick from the list — or type any term above and see its curve.</p></div>
+</div>
+</section>
+
+<p class="scope-note">Each publication counts once, under its <em>primary</em>
+topic. The top 8 topics carry their own color; the rest are “other”, still
+drillable. The newest quarter is usually part-way through. Podcasts excluded
+(#50). Past the dashed rule is the leading edge: every
+<a href="{{ url_for('upcoming.upcoming_view') }}">open note</a> on something
+coming, drawn as an outlined mark because nothing about it is published yet.
+Data:
+<a href="{{ url_for('insights.topic_time_data') }}" class="mono">topic-time.json</a></p>
+
+<script>
+  const TIME_URLS = {
+    data: "{{ url_for('insights.topic_time_data') }}",
+    keyword: "{{ url_for('insights.keyword_time_data') }}",
+    catalog: "{{ url_for('catalog.list_view') }}",
+    upcoming: "{{ url_for('insights.upcoming_edge_data') }}",
+  };
+</script>
+<script src="{{ url_for('static', filename='topic-time.js') }}"></script>
+{% endblock %}

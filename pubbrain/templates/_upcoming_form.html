@@ -1,0 +1,62 @@
+{# The add/edit form for an upcoming note (#56). `note` is None when adding.
+   No LLM anywhere in it: topics are picked from the frozen vocabulary and
+   people from the catalog's own list. #}
+<form class="note-form" method="post" action="{{ action }}">
+  <label>Working title
+    <input type="text" name="working_title" required
+           value="{{ note.working_title if note else '' }}"
+           placeholder="what it will probably be called">
+  </label>
+
+  <label>Note
+    <textarea name="note" rows="3"
+      placeholder="where it came from, the angle, who mentioned it">{{ note.note if note and note.note else '' }}</textarea>
+  </label>
+
+  <label>Expected
+    <select name="expected">
+      <option value="">no idea yet</option>
+      {% for q in quarter_options %}
+      <option value="{{ q }}" {% if note and note.expected == q %}selected{% endif %}>{{ q }}</option>
+      {% endfor %}
+    </select>
+    <span class="byline">a quarter, not a date — nuance goes in the note</span>
+  </label>
+
+  <fieldset class="topic-picker">
+    <legend>Topics <span class="byline">&mdash; up to {{ max_topics }}, most central first</span></legend>
+    {% set chosen = (note.topics | map(attribute='slug') | list) if note else [] %}
+    {% for slot in range(max_topics) %}
+    <select name="topic">
+      <option value="">—</option>
+      {% for cluster in clusters %}
+      <optgroup label="{{ cluster.cluster }}">
+        {% for t in cluster.topics %}
+        <option value="{{ t.slug }}"
+          {% if chosen|length > slot and chosen[slot] == t.slug %}selected{% endif %}>{{ t.name }}</option>
+        {% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+    {% endfor %}
+  </fieldset>
+
+  <fieldset class="people-picker" data-endpoint="{{ url_for('catalog.people_search') }}">
+    <legend>People <span class="byline">&mdash; whoever is likely to write it</span></legend>
+    <ul class="chips" data-chips>
+      {% for p in (note.people if note else []) %}
+      <li>{{ p.name }}<input type="hidden" name="person_id" value="{{ p.id }}">
+        <button type="button" class="drop" data-drop aria-label="remove">&times;</button></li>
+      {% endfor %}
+    </ul>
+    <span class="picker">
+      <input type="search" data-person-search autocomplete="off" placeholder="add a person">
+      <ul class="suggestions" hidden></ul>
+    </span>
+  </fieldset>
+
+  <div class="actions">
+    <button type="submit">{{ "save" if note else "add note" }}</button>
+    {% if note %}<a class="quiet" href="{{ url_for('upcoming.upcoming_view') }}">cancel</a>{% endif %}
+  </div>
+</form>

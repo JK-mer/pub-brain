@@ -1,0 +1,25 @@
+# Workbench on the deployment server (#48). Installed to ~/.config/systemd/user/
+# and enabled with `systemctl --user enable --now pubbrain-web`; `loginctl
+# enable-linger <user>` keeps user services running with nobody logged in.
+#
+# Loopback only: cloudflared connects from the same host and Cloudflare Access
+# fronts it. Do NOT bind 0.0.0.0 here — PUBBRAIN_WEB_TOKEN would then cross
+# the LAN in clear on every request.
+[Unit]
+Description=pub-brain workbench
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/pub-brain
+# Secrets: chmod 600, gitignored. PUBBRAIN_LLM_API_KEY replaces
+# the desktop keyring, which a headless box does not have (#48, #8).
+EnvironmentFile=%h/pub-brain/deploy/server/.env
+Environment=PYTHONPATH=%h/pub-brain
+Environment=PUBBRAIN_REMOTE=1
+ExecStart=/usr/bin/python -m pubbrain web --port 8901
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

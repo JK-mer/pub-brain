@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Projects — pub-brain{% endblock %}
+{% block content %}
+<h1>Standing projects</h1>
+<p class="count">Dashboards and long-running projects. Unlike a publication
+these have no date — they are updated rather than published — and their members
+keep their own type and series, and stay in the main listing.</p>
+
+{% if request.args.get('error') %}
+<p class="notice error">{{ request.args.get('error') }}</p>
+{% endif %}
+{% if request.args.get('removed') %}
+<p class="notice">Deleted {{ request.args.get('removed') }}.</p>
+{% endif %}
+
+<form class="flag-bar" method="post" action="{{ url_for('catalog.create_collection') }}">
+  <input type="text" name="name" placeholder="new project name" required>
+  <input type="url" name="url" placeholder="its merics.org page (optional)">
+  <button type="submit">create</button>
+  <span class="byline">without a page URL it is yours to curate — detection has
+  nothing to read, so members are only what you attach</span>
+</form>
+
+{% for c in collections %}
+<article class="row">
+  <div class="meta">
+    <span class="date">{{ c.n }}</span>
+    {% if not c.url %}<span class="badge">curated</span>{% endif %}
+  </div>
+  <h2><a href="{{ url_for('catalog.collection_view', slug=c.slug) }}">{{ c.name }}</a></h2>
+  {% if c.url %}<p class="byline"><a href="{{ c.url }}" rel="noopener">merics.org &nearr;</a></p>{% endif %}
+</article>
+{% else %}
+<p class="empty">No projects yet — name one above.</p>
+{% endfor %}
+{% endblock %}

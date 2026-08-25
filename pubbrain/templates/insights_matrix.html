@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Who knows what — pub-brain{% endblock %}
+{% block content %}
+<h1>Who knows what</h1>
+
+<section id="matrix-root">
+<div class="filters map-controls">
+  <label class="clear"><input type="checkbox" id="show-all">
+    include former staff &amp; externals</label>
+  <span class="count-mono" id="matrix-count"></span>
+  <button type="button" id="fullscreen">fullscreen</button>
+</div>
+
+<div class="matrix-wrap">
+  <table class="matrix" id="matrix" aria-label="People by topic"></table>
+</div>
+</section>
+
+<p class="scope-note">A cell counts credited publications whose <em>primary</em>
+topic is the column — click it for exactly those records. Credits mean author
+or guest; hosting is not output (#27). The mono number beside each name is
+their <strong>total</strong> credits: a sparse row for someone with many
+credits means their work sits outside the vocabulary's main lines — or that
+credits are missing (#12) — not that they know nothing. Podcast appearances
+carry no topics until #50. Click a topic to rank people by it.
+Data: <a href="{{ url_for('insights.matrix_data') }}" class="mono">matrix.json</a></p>
+
+<script>
+  const MATRIX_URLS = {
+    data: "{{ url_for('insights.matrix_data') }}",
+    catalog: "{{ url_for('catalog.list_view') }}",
+    person: "{{ url_for('catalog.person_view', person_id=0) }}".replace("/0", "/"),
+  };
+</script>
+<script src="{{ url_for('static', filename='topic-matrix.js') }}"></script>
+{% endblock %}

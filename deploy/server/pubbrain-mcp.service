@@ -1,0 +1,19 @@
+# MCP server over streamable HTTP for the claude.ai connector (#48, #23).
+# Loopback only for the same reason as the workbench: cloudflared reaches it
+# from the host, and the bearer token must not cross the LAN in clear.
+[Unit]
+Description=pub-brain MCP server
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/pub-brain
+EnvironmentFile=%h/pub-brain/deploy/server/.env
+Environment=PYTHONPATH=%h/pub-brain
+Environment=PUBBRAIN_REMOTE=1
+ExecStart=/usr/bin/python -m pubbrain mcp --transport streamable-http --port 8902
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

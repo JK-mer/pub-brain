@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+{% block title %}{{ publication.title }} — pub-brain{% endblock %}
+{% block content %}
+{# Reading the record is the common case and editing is the exception, so every
+   hand-edit (#31, #36, #40, #46, #25, #32) is a button in a right-aligned row
+   and its fields live in a dialog (#60). Nothing about what the forms do
+   changes here — same routes, same rules. #}
+<article class="detail" data-pub="{{ publication.id }}">
+  <div class="meta">
+    <span class="date">{{ publication.date_published }}</span>
+    <span class="type">{{ publication.pub_type }}</span>
+    {# The series links into the catalog filtered to its own run (#32). #}
+    {% if publication.series %}<a class="series"
+      href="{{ url_for('catalog.list_view', series=publication.series, filtered=1) }}"
+      title="everything in this series">{{ publication.series }}</a>{% endif %}
+    {% if publication.access != 'public' %}<span class="badge member">member</span>{% endif %}
+  </div>
+  <h1>{{ publication.title }}</h1>
+  {% if publication.subtitle %}<p class="subtitle">{{ publication.subtitle }}</p>{% endif %}
+  {% if request.args.get('error') %}
+  <p class="notice error">{{ request.args.get('error') }}</p>
+  {% endif %}
+  {% if request.args.get('note') %}
+  <p class="notice">{{ request.args.get('note') }}</p>
+  {% endif %}
+
+  {# Removing a credit lives on the name itself (#61): a × that appears on
+     hover, where the thing it removes is. Clicking the name still opens the
+     person — only the × removes.
+
+     A div, not a p: the parser closes an open <p> at a <form> start tag, which
+     reparented the first credit's form out of its own span and left one × of
+     two styled. #}
+  <div class="byline credits">
+    {% for p in people %}
+    <span class="credit">
+      <a href="{{ url_for('catalog.person_view', person_id=p.id) }}">{{ p.name }}</a>{% if p.role != 'author' %} ({{ p.role }}){% endif %}{% if p.source == 'manual' %} <span class="badge">by hand</span>{% endif %}
+      <form method="post" action="{{ url_for('catalog.credit', pub_id=publication.id) }}"
+        {% if p.source == 'manual' %}data-confirm="Remove {{ p.name }}? This credit was entered by hand, so nothing will restore it."{% endif %}>
+        <input type="hidden" name="person_id" value="{{ p.id }}">
+        {# The role travels with it: one person can hold two credits here. #}
+        <input type="hidden" name="role" value="{{ p.role }}">
+        <button type="submit" name="action" value="remove" class="uncredit"
+                title="remove this credit"
+                aria-label="remove {{ p.name }} as {{ p.role }}">&times;</button>
+      </form>
+    </span>{{ "," if not loop.last }}
+    {% else %}
+    <span class="none">no people credited — a known gap for some types (#12)</span>
+    {% endfor %}
+  </div>
+
+  <p class="links">
+    <a href="{{ publication.url }}" rel="noopener">merics.org &nearr;</a>
+    {% if publication.pdf_url %}<a href="{{ publication.pdf_url }}" rel="noopener">PDF &nearr;</a>{% endif %}
+  </p>
+
+  <div class="record-actions">
+    {# The star alone: shortlisting is one bit, and the note is the popup's
+       business (#25). #}
+    <button type="button" data-open="dlg-star" class="star-btn{{ ' on' if shortlist }}"
+      title="{{ 'shortlisted ' ~ shortlist.added_at[:10] if shortlist else 'add to the shortlist' }}"
+      aria-label="{{ 'shortlisted' if shortlist else 'not shortlisted' }}">{{ '★' if shortlist else '☆' }}</button>
+    <button type="button" data-open="dlg-credit">credit</button>
+    {# Red when this belongs to no project, grey once it does — the colour is
+       the whole status, so the row reads at a glance. #}
+    <button type="button" data-open="dlg-project"
+            class="proj-btn{{ ' attached' if member_of else ' loose' }}">
+      {% if member_of %}{{ member_of | map(attribute='name') | join(', ') }}{% else %}project{% endif %}
+    </button>
+  </div>
+
+  <dialog id="dlg-credit" class="pop">
+    <h2>Credit someone the page does not name</h2>
+    <p class="byline">Stored as a hand-made credit, which re-parsing leaves
+    alone (#40). A name that matches nobody creates a new person.</p>
+    <form method="post" action="{{ url_for('catalog.credit', pub_id=publication.id) }}">
+      <label>Person
+        {# A real list, not a <datalist>: browsers disagree about whether one
+           populated by script opens at all, which is why the first version
+           looked like it did nothing. #}
+        <span class="picker">
+          <input type="search" name="name" autocomplete="off" data-person-search
+                 data-endpoint="{{ url_for('catalog.people_search') }}"
+                 placeholder="start typing a name…">
+          <ul class="suggestions" hidden></ul>
+        </span>
+      </label>
+      <input type="hidden" name="person_id" data-person-id>
+      <label>Role
+        <select name="role">
+          <option value="author">author</option>
+          <option value="host">host</option>
+          <option value="guest">guest</option>
+        </select>
+      </label>
+      <div class="pop-actions">
+        <button type="button" data-close class="quiet">cancel</button>
+        <button type="submit">credit</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-star" class="pop">
+    <h2>{{ 'Shortlisted' if shortlist else 'Add to the shortlist' }}</h2>
+    <p class="byline">The one signal here that is yours rather than scraped or
+    generated — and it moves search ranking by two places (#25).</p>
+    <form method="post" action="{{ url_for('catalog.shortlist_toggle', pub_id=publication.id) }}">
+      <label>Why does this one matter?
+        <input type="text" name="note" value="{{ shortlist.note or '' if shortlist else '' }}"
+               placeholder="made waves? well received? say why">
+      </label>
+      <div class="pop-actions">
+        <button type="button" data-close class="quiet">cancel</button>
+        {% if shortlist %}
+        <button type="submit" name="action" value="remove" class="quiet">remove the star</button>
+        <button type="submit">save the note</button>
+        {% else %}
+        <button type="submit">★ shortlist it</button>
+        {% endif %}
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-project" class="pop">
+    <h2>Standing projects</h2>
+    {% if member_of %}
+    <p class="byline">A hand-made membership outranks detection and is never
+    undone by it (#32). A member keeps its place in the main listing.</p>
+    <ul class="chips stacked">
+      {% for m in member_of %}
+      <li>
+        <a href="{{ url_for('catalog.collection_view', slug=m.slug) }}">{{ m.name }}</a>
+        {% if m.source == 'manual' %}<span class="byline">by hand</span>{% endif %}
+        <form method="post" data-confirm="Detach from {{ m.name }}?"
+              action="{{ url_for('catalog.collection_toggle', pub_id=publication.id) }}">
+          <input type="hidden" name="slug" value="{{ m.slug }}">
+          <button type="submit" name="action" value="remove" class="drop"
+                  aria-label="detach from {{ m.name }}">&times;</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <form method="post" action="{{ url_for('catalog.collection_toggle', pub_id=publication.id) }}">
+      <label>{{ 'Attach to another' if member_of else 'Attach to a project' }}
+        <select name="slug">
+          <option value="">— name a new one below —</option>
+          {% for c in all_collections %}<option value="{{ c.slug }}">{{ c.name }}</option>{% endfor %}
+        </select>
+      </label>
+      {# Naming one here means starting a project does not mean leaving the page
+         you are on (#37). #}
+      <label>…or start one
+        <input type="text" name="new_project" placeholder="a new project's name">
+      </label>
+      <div class="pop-actions">
+        <button type="button" data-close class="quiet">cancel</button>
+        <button type="submit">attach</button>
+      </div>
+    </form>
+  </dialog>
+
+  {% if plain %}
+  <section class="plain-blurb">
+    <p class="plain big">{{ plain.blurb }}</p>
+    <p class="byline">in plain language, from the summary below · {{ plain.model }}
+      {% if plain.stale %}· <strong>stale</strong> — a different summary is
+      primary now; re-run <code>blurb --include-stale</code>{% endif %}</p>
+  </section>
+  {% endif %}
+
+  {% if enrichments|length > 1 %}
+  <p class="notice">This publication holds {{ enrichments|length }} summaries.
+  Only the <strong>primary</strong> is used by search, the glossary counts and
+  every list — the others are candidates, waiting to be promoted or dismissed.</p>
+  {% endif %}
+
+  {% for e in enrichments %}
+  <section class="enrichment{{ ' candidate' if not e.is_primary }}">
+    {% if enrichments|length > 1 %}
+    <p class="eyebrow">{{ 'Primary — in use' if e.is_primary else 'Candidate — used by nothing' }}</p>
+    {% endif %}
+    <p class="one-liner big">{{ e.summary_one_liner }}</p>
+    <p class="summary">{{ e.summary_short }}</p>
+    <ul class="findings">
+      {% for f in e.key_findings %}<li>{{ f }}</li>{% endfor %}
+    </ul>
+    <p class="entities">
+      {% for group, names in e.entities.items() %}{% for n in names %}
+      <a class="chip" href="{{ url_for('catalog.list_view', q=n) }}">{{ n }}</a>
+      {% endfor %}{% endfor %}
+    </p>
+    <p class="provenance">{{ e.model }} · prompt v{{ e.prompt_version }} · {{ e.enriched_at[:10] }}
+      {% if e.review %}<span class="badge verdict-{{ e.review.verdict }}">{{ e.review.verdict }}{% if e.review.note %}: {{ e.review.note }}{% endif %}</span>{% endif %}
+    </p>
+
+    {% if e.is_primary %}
+    <div class="record-actions left">
+      <button type="button" data-open="dlg-flag"
+        class="{{ '' if review and review.verdict == 'flagged' else 'quiet' }}">⚑ flag</button>
+      <button type="button" data-open="dlg-regen" class="quiet">↻ another summary</button>
+      <button type="button" data-open="dlg-write">✎ write it yourself</button>
+    </div>
+    {% else %}
+    <div class="record-actions left">
+      <form method="post" action="{{ url_for('review.dismiss', pub_id=publication.id, enrichment_id=e.id) }}"
+            data-confirm="Delete this candidate? The primary stays as it is.">
+        <button type="submit" class="quiet">✕ dismiss</button>
+      </form>
+      <form method="post" action="{{ url_for('review.promote', pub_id=publication.id, enrichment_id=e.id) }}">
+        <button type="submit">▲ make this the primary</button>
+      </form>
+    </div>
+    {% endif %}
+  </section>
+  {% else %}
+  <p class="notice">No enrichment — {{ 'no body text exists for this record (podcasts and paywalled items)' if not text else 'not yet enriched' }}, so summary search does not reach it.</p>
+  <div class="record-actions left">
+    <button type="button" data-open="dlg-write">✎ write the summary yourself</button>
+  </div>
+  {% endfor %}
+
+  <dialog id="dlg-flag" class="pop">
+    <h2>Flag this summary</h2>
+    <p class="byline">Summaries are trusted unless flagged (#21) — this is how
+    an exception gets recorded and reaches the Flags page.</p>
+    <form method="post" action="{{ url_for('review.flag', pub_id=publication.id) }}">
+      <label>What is wrong with it?
+        <input type="text" name="note"
+               value="{{ review.note or '' if review and review.verdict == 'flagged' else '' }}"
+               placeholder="misleading? say how">
+      </label>
+      <div class="pop-actions">
+        <button type="button" data-close class="quiet">cancel</button>
+        {% if review and review.verdict == 'flagged' %}
+        <button type="submit" name="action" value="clear" class="quiet">clear the flag</button>
+        <button type="submit">update</button>
+        {% else %}
+        <button type="submit">⚑ flag it</button>
+        {% endif %}
+      </div>
+    </form>
+  </dialog>
+
+  {# Not gated on the flag (#39). Flagging says "this is wrong"; asking a second
+     model says nothing about the first, and requiring the one to get the other
+     filled the Flags page with publications nothing is wrong with. #}
+  <dialog id="dlg-regen" class="pop">
+    <h2>Ask another model</h2>
+    <p class="byline">Adds a candidate beside the current summary — nothing is
+    replaced until you promote it.</p>
+    <form method="post" action="{{ url_for('review.regenerate', pub_id=publication.id) }}">
+      <label>Model
+        <select name="model">
+          {% for p, ms in model_choices.items() %}
+          <optgroup label="{{ p }}">
+            {% for m in ms %}
+            <option value="{{ p }}:{{ m }}">{{ m }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="pop-actions">
+        <button type="button" data-close class="quiet">cancel</button>
+        <button type="submit">↻ write another</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-write" class="pop wide">
+    <h2>Write the summary yourself</h2>
+    <p class="byline">Replaces what the model wrote — its version is demoted,
+    not deleted, and stays readable below. Nothing regenerates over a
+    hand-written summary (#46).</p>
+    <form method="post" action="{{ url_for('catalog.write_summary', pub_id=publication.id) }}">
+      <label>The one-liner <span class="byline">at most 30 words — this is what
+        search ranks on</span>
+        <input type="text" name="one_liner" required
+               value="{{ (enrichments | selectattr('is_primary') | first).summary_one_liner if enrichments else '' }}">
+      </label>
+      <label>The summary <span class="byline">the argument and the so-what</span>
+        <textarea name="short" rows="14" required>{{ (enrichments | selectattr('is_primary') | first).summary_short if enrichments else '' }}</textarea>
+      </label>
+      <div class="pop-actions">
+        <button type="button" data-close class="quiet">cancel</button>
+        <button type="submit">Save summary</button>
+      </div>
+    </form>
+  </dialog>
+
+  {% if sections %}
+  <section class="body-text">
+    <h2>Text{% if text_source and text_source != 'html' %} <span class="badge">{{ text_source }}</span>{% endif %} <span class="count">({{ text.word_count | default(0) }} words, {{ section_count }} sections{% if sections | length != section_count %}, {{ sections | length }} retrieval units{% endif %})</span></h2>
+    {% for s in sections %}
+    {# A chunk is a window the pipeline cut because the section was longer than
+       the embedder reads (#34) — never a boundary the author drew, so the
+       heading is printed once and the windows are numbered under it. #}
+    <section class="section {{ 'boilerplate' if s.is_boilerplate }} {{ 'chunk' if s.chunk_index is not none }}">
+      {% if s.heading and not s.chunk_index %}<h3>{{ s.heading }}{% if s.is_boilerplate %} <span class="badge">standing feature</span>{% endif %}</h3>{% endif %}
+      {% if s.chunk_index is not none %}<p class="eyebrow">part {{ s.chunk_index + 1 }} of {{ s.chunk_total }} — split to fit the embedder, not by the author</p>{% endif %}
+      <div class="prose">{{ s.body }}</div>
+    </section>
+    {% endfor %}
+  </section>
+  {% elif text %}
+  <section class="body-text">
+    <h2>Text{% if text_source and text_source != 'html' %} <span class="badge">{{ text_source }}</span>{% endif %} <span class="count">({{ text.word_count }} words)</span></h2>
+    <div class="prose">{{ text.body }}</div>
+  </section>
+  {% endif %}
+
+  <div class="record-actions left">
+    {% if not text %}
+    <span class="byline">No body text — enrichment, sections and search cannot
+    reach this record until it has some.</span>
+    {% endif %}
+    <button type="button" data-open="dlg-text" class="{{ 'quiet' if text }}">
+      {% if text_source == 'manual' %}✎ edit the body text{% elif text %}✎ replace the body text{% else %}✎ add the body text{% endif %}
+    </button>
+    {% if not parent and not chapters %}
+    <button type="button" data-open="dlg-chapter" class="quiet">⇥ make this a chapter</button>
+    {% endif %}
+  </div>
+
+  <dialog id="dlg-text" class="pop wide">
+    <h2>Body text by hand</h2>
+    <p class="byline">For what cannot be scraped: paywalled member items,
+    PDF-only reports, pieces published on a partner's site. Saved text is marked
+    <span class="mono">manual</span> and <strong>`extract-text` will not
+    overwrite it</strong> (#31). Saving re-indexes and re-sections this record
+    immediately.</p>
+    <form method="post" action="{{ url_for('catalog.save_text', pub_id=publication.id) }}">
+      <textarea id="manual-body" name="body" rows="18"
+        data-convert="{{ url_for('catalog.convert_html') }}"
+        placeholder="Paste straight from the page. Headings, lists and links are kept — a textarea alone would receive only stripped plain text.">{{ text.body if text_source == 'manual' and text else '' }}</textarea>
+      <p class="byline" id="paste-note"></p>
+      <div class="pop-actions">
+        <button type="button" data-close class="quiet">cancel</button>
+        {% if publication.pdf_url %}
+        <a class="button" href="{{ publication.pdf_url }}" rel="noopener">open the PDF &nearr;</a>
+        {% endif %}
+        {% if text_source == 'manual' %}
+        <button type="submit" name="action" value="remove" class="quiet"
+                data-confirm="Discard the hand-entered text?">discard it</button>
+        {% endif %}
+        <button type="submit">Save body text</button>
+      </div>
+    </form>
+  </dialog>
+
+  {% if not parent and not chapters %}
+  <dialog id="dlg-chapter" class="pop">
+    <h2>Make this a chapter of a report</h2>
+    <p class="byline">The report is listed once and this piece moves under it —
+    still searchable on its own, no longer a row in the catalog beside its
+    parent (#36).</p>
+    <form method="post" id="attach-form"
+          action="{{ url_for('catalog.attach_chapter', pub_id=publication.id) }}">
+      <label>The parent report
+        <span class="picker">
+          <input type="search" autocomplete="off" data-pub-search
+                 data-endpoint="{{ url_for('catalog.pubs_search') }}"
+                 placeholder="find the report by title…">
+          <ul class="suggestions" hidden></ul>
+        </span>
+      </label>
+      <input type="hidden" name="parent_id" data-pub-id>
+      <label>Position <span class="byline">optional — where it sits in the
+        contents</span>
+        <input type="number" name="position">
+      </label>
+      <div class="pop-actions">
+        <button type="button" data-close class="quiet">cancel</button>
+        <button type="submit">attach</button>
+      </div>
+    </form>
+  </dialog>
+  {% endif %}
+
+  {% if site_tags %}
+  <p class="site-tags">site tags (reference only, never the topic field): {{ site_tags | join(', ') }}</p>
+  {% endif %}
+
+  {% if parent %}
+  <p class="notice">Chapter {{ publication.parent_position }} of
+    <a href="{{ url_for('catalog.pub_view', pub_id=parent.id) }}">{{ parent.title }}</a>
+    — searchable in its own right, listed under the report rather than beside it.
+    <button form="detach-chapter" type="submit" class="quiet">detach</button></p>
+  <form id="detach-chapter" method="post"
+        action="{{ url_for('catalog.detach_chapter', pub_id=publication.id) }}"></form>
+  {% endif %}
+
+  {% if chapters %}
+  <section class="chapters">
+    <h2>Contents <span class="count">({{ chapters | length }} chapters,
+      {{ chapters | sum(attribute='word_count') }} words)</span></h2>
+    <ol class="chapter-list">
+      {% for c in chapters %}
+      <li>
+        <a href="{{ url_for('catalog.pub_view', pub_id=c.id) }}">{{ c.title }}</a>
+        <span class="quiet">{{ c.word_count }} words</span>
+        {% if c.summary_one_liner %}<p class="one-liner">{{ c.summary_one_liner }}</p>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
+  {% if topics %}
+  <p class="topic-chips">topics:
+    {% for t in topics %}
+    <a class="chip{{ '' if t.primary else ' quiet' }}"
+       href="{{ url_for('catalog.list_view', topic=t.slug, primary='1' if t.primary else None, filtered='1') }}"
+       title="{{ 'what this is about' if t.primary else 'also carries this topic' }}">{{ t.name }}</a>
+    {% endfor %}
+  </p>
+  {% endif %}
+</article>
+<script src="{{ url_for('static', filename='record.js') }}"></script>
+{% endblock %}
