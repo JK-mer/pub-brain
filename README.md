@@ -4,16 +4,13 @@ A searchable, AI-readable catalog of everything MERICS has published.
 
 ## The problem
 
-An institute's publication archive is its memory, and the website is a poor
-interface to it. Site search matches keywords, not ideas. Nobody can say from
-memory what was published on a topic three years ago, who has written on it,
-or whether a new draft overlaps with existing work. The knowledge exists; the
-recall does not.
+Site search on merics.org matches keywords, not ideas. Nobody can say from
+memory what was published on a topic three years ago, who has written on
+it, or whether a new draft overlaps with existing work.
 
-pub-brain closes that gap. It builds a local catalog of roughly 1,300
-publications from merics.org and makes them searchable three ways: exact
-keywords, semantic similarity ("find pieces about this idea, however it was
-phrased"), and through an AI assistant that can query the catalog directly.
+pub-brain builds a local catalog of roughly 1,300 publications and makes
+it searchable three ways: exact keywords, semantic similarity, and through
+an AI assistant that queries the catalog directly.
 
 Generalised from a production system in daily personal use. The published
 version contains the architecture and code; the data itself is rebuilt from
@@ -22,40 +19,34 @@ screenshots and film below is public information from merics.org.
 
 ## What it does
 
-- Crawls the publication sitemap politely (rate-limited, cached, re-runs only
-  fetch what changed) and parses every page into a structured record:
-  authors, type, date, topics, full body text.
-- Generates a summary for each publication with an LLM: a one-line recall
-  unit, a short abstract, key findings, and the named entities. Summaries
-  are validated, not hoped for: an answer over the word cap is re-asked,
-  never stored. Publications that exist only as an infographic go through a
-  vision model instead.
-- Indexes everything twice: full-text (SQLite FTS5) for exact terms, local
-  vector embeddings for meaning. `find` blends both.
-- Maps summaries onto a controlled topic vocabulary and lays the whole
-  catalog out as a 2D landscape, so coverage and gaps are visible at a
-  glance.
-- Serves a local web workbench for browsing, searching, correcting and
-  flagging records, and an MCP server that exposes the same queries to AI
-  assistants (Claude, or anything else that speaks MCP).
+- Searchable catalog of the full publication record: SQLite full-text
+  search plus local vector embeddings; `find` blends both.
+- LLM summary per publication (one-liner, abstract, key findings,
+  entities), validated in code and re-asked when off-spec; vision model
+  for infographic-only pieces.
+- Topic mapping onto a controlled vocabulary; the whole catalog laid out
+  as a 2D landscape.
+- Local web workbench for browsing and corrections; MCP server exposing
+  the same queries to AI assistants.
+- Kept current by a rate-limited, cached, incremental crawl of the
+  publication sitemap.
 
-## What it looks like
+## Interface
 
-Hybrid search over the catalog, ranked by keyword and meaning together:
+Hybrid search, ranked by keyword and meaning together:
 
 ![Search results for "de-risking"](docs/media/pb-search.png)
 
-A record page: the generated summary, key findings and entities, with the
-editorial controls (credit, project, flag) beside them:
+A record page: generated summary, key findings, entities, editorial
+controls:
 
 ![A publication record](docs/media/pb-record.png)
 
-The landscape: every summarised publication placed by meaning, coloured by
-topic cluster. Coverage and gaps at a glance:
+The landscape: every publication placed by meaning, coloured by topic:
 
 ![The Insights landscape](docs/media/pb-landscape.png)
 
-The 76-second registry film walks through the whole system on real data
+The 76-second registry film
 ([mp4 in full quality](docs/media/registry-film.mp4)):
 
 ![The registry film](docs/media/registry-film.gif)
@@ -93,30 +84,17 @@ upserts by URL, the enricher's worklist is "has text, has no summary", and an
 interrupted run resumes by running the same command again. Raw HTML is cached
 on disk, so improving the parser never means re-crawling the site.
 
-## Design decisions that carry over
+## Design decisions
 
-These are the parts worth stealing for any organisational deployment,
-independent of the stack:
-
-- **Provider-agnostic LLM layer.** One module speaks the OpenAI-compatible
-  chat API; nothing else in the codebase knows which vendor is behind it.
-  Swapping providers, or routing through a self-hosted gateway that holds
-  the real key, is a config change. API keys live in the OS keyring or a
-  `chmod 600` env file, never in the repo or a log line.
-- **Validation over trust.** Model output is checked in code (word caps,
-  JSON shape, entity grounding against the source text) and re-asked on
-  failure. A human-written summary is a first-class row the pipeline
-  refuses to overwrite.
-- **Separation of fetching and parsing.** The raw cache means the expensive,
-  polite part (crawling) happens once, and the cheap part (parsing) can be
-  improved and re-run forever.
-- **MCP as the integration surface.** The AI-assistant tools wrap the same
-  query layer as the CLI and the workbench, so every interface answers
-  identically, and exactly one MCP tool can write.
-- **Fail-closed remote mode.** The same codebase runs on a workstation and
-  on a headless server behind a tunnel. Started in remote mode without an
-  auth token, the service exits instead of serving; internal-only routes are
-  unregistered, not merely forbidden.
+- Provider-agnostic LLM layer via OpenAI-compatible API endpoints; keys in
+  the OS keyring or env file, never in the repo.
+- Model output validated in code (word caps, JSON shape, entity grounding)
+  and re-asked on failure; human-written summaries are never overwritten.
+- Fetching and parsing separated: crawl once, re-parse forever from the
+  raw cache.
+- One query layer behind CLI, workbench and MCP; exactly one MCP tool
+  writes.
+- Fail-closed remote mode: no auth token configured, no service.
 
 ## Deployment
 
@@ -126,15 +104,13 @@ systemd user services on a headless box, loopback-only binding, a tunnel in
 front, an access policy on the human-facing hostname and OAuth on the
 assistant-facing one.
 
-## What integrating this at MERICS would look like
+## Integration at MERICS
 
-The org-specific parts are exactly two: the page parser (tuned to the
-current website templates) and the staff roster sync. Everything else is
-generic. An institutional deployment would point the LLM layer at whatever
-endpoint the organisation sanctions, run the pipeline on a schedule, and
-expose the MCP server to the assistants staff already use. The workbench
-then serves as the editorial control point: summaries can be corrected,
-flagged and spot-checked by the people who know the content.
+The org-specific parts are two: the page parser and the staff roster sync.
+An institutional deployment points the LLM layer at a sanctioned endpoint,
+runs the pipeline on a schedule, and exposes the MCP server to the
+assistants staff already use. The workbench is the editorial control
+point for correcting and spot-checking summaries.
 
 ## Repository map
 
@@ -150,7 +126,7 @@ flagged and spot-checked by the people who know the content.
 | [deploy/server/](deploy/server/) | Headless deployment: units, env, exposure notes |
 | [tests/](tests/) | 630+ tests, run with `pytest` |
 
-## Running it
+## Usage
 
 ```sh
 pip install -r requirements.txt
